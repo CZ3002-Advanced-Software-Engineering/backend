@@ -37,7 +37,12 @@ video_capture = VideoCapture(0)
 
 #marking attendance maybe..
 def markAttendance(name):
-    with open('Attendance.csv', 'w+') as f:
+    date_time = datetime.datetime.now()
+    string = str(date_time)
+    extension = ".csv"
+    filename = string + extension
+    
+    with open(filename, 'w+') as f:
         myDataList = f.readlines()
         nameList = []
         for line in myDataList:

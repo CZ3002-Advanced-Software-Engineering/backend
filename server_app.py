@@ -19,7 +19,7 @@ app = Flask(__name__)
 
 
 # * ----------MongoDB connect -------*
-app.config["MONGO_URI"] = "mongodb://localhost:27017/fras_data"
+app.config["MONGO_URI"] = "mongodb+srv://admin:p%40ssw0rd@asecluster.mgx31.mongodb.net/test"
 mongo = PyMongo(app)
 
 studentCollection = mongo.db.students

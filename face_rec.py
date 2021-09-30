@@ -46,11 +46,12 @@ class FaceRec:
         face_locations = face_recognition.face_locations(unknown_image)
         face_encodings = face_recognition.face_encodings(unknown_image, face_locations)
 
+        name = "Nobody"
+
         # matching unknown image with the image encodings
         for (top, right, bottom, left), face_encoding in zip(face_locations, face_encodings):
 
             matches = face_recognition.compare_faces(known_face_encodings, face_encoding)
-            name = "Nobody"
 
             face_distances = face_recognition.face_distance(known_face_encodings, face_encoding)
             best_match_index = np.argmin(face_distances)
@@ -59,4 +60,4 @@ class FaceRec:
                 name = known_face_names[best_match_index]
                 return name
 
-            return name
+        return name

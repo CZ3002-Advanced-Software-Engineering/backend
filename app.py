@@ -18,6 +18,7 @@ def encode():
     FaceRec('./known-people', './stranger', './encoding').encode_images()
     stop = time.perf_counter()
     print(stop - start)
+    time.sleep(2)
     return 'Encoding Complete'
 
 

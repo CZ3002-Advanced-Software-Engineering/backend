@@ -7,48 +7,63 @@ from flask_pymongo import PyMongo
 import cv2
 import numpy as np
 import re
-from PyMongo import MongoClient
+#from PyMongo import MongoClient
 
-# from teachers import Teachers
-# from courses import Courses
-# from students import Students
+from teachers import Teachers
+from courses import Courses
+from students import Students
 
-#FILE_PATH = os.path.dirname(os.path.realpath(__file__))
-mongodb_host = os.environ.get('MONGO_HOST', 'asecluster.mgx31.mongodb.net')
-mongodb_port = int(os.environ.get('MONGO_PORT', '27017'))
-client = MongoClient(mongodb_host, mongodb_port)
-db = client.database
-data = db.attendancelist
+FILE_PATH = os.path.dirname(os.path.realpath(__file__))
+
+
+# mongodb_host = os.environ.get('MONGO_HOST', 'asecluster.mgx31.mongodb.net')
+# mongodb_port = int(os.environ.get('MONGO_PORT', '27017'))
+# client = MongoClient(mongodb_host, mongodb_port)
+# db = client.database
+#data = db.attendancelist
+
 
 # * ---------- Create App --------- *
 app = Flask(__name__)
 
 
 # * ----------MongoDB connect -------*
-# app.config['MONGO_DBNAME'] = 'database'
-# app.config["MONGO_URI"] = "mongodb+srv://admin:p%40ssw0rd@asecluster.mgx31.mongodb.net/test"
+#app.config['MONGO_DBNAME'] = 'database'
+app.config["MONGO_URI"] = "mongodb+srv://admin:p%40ssw0rd@asecluster.mgx31.mongodb.net/test/"
 
-#mongo = PyMongo(app)
+mongo = PyMongo(app)
 
- #studentCollection = mongo.db.students
-# teacherCollection = mongo.db.teachers
-# courseCollection = mongo.db.courses
-
+studentCollection = mongo.db.students
+teacherCollection = mongo.db.teachers
+courseCollection = mongo.db.courses
+attendanceListCollection = mongo.db.attendancelist
 #student = mongo.db.database.student
 
 # * -----------Create routes and functions here ---------
-@app.route("take_attendance/manual", methods=['GET'])
-def lists():
-    data_1 = data.find()
-    a1="active"
-    return (data==data_1)
+@app.route("/testing", methods=['GET'])
+def test():
+     a = studentCollection.find({}, {'Gender': 'Female'})
 
-# @app.route("/")
-@app.route("/name", methods=['POST'])
-def name():
-    name = request.values.get("Name")
-    data.insert({"Name":name})
-    return redirect("/list")
+    print (a)
+
+
+    # return("Hello world")
+    
+  #  a = studentCollection.find({'Gender': 'Female'})
+   
+
+# @app.route("take_attendance/manual", methods=['GET'])
+# def lists():
+#     data_1 = data.find()
+    
+#     return ("hello world")
+
+# # @app.route("/")
+# @app.route("/name", methods=['POST'])
+# def name():
+#     name = request.values.get("Name")
+#     data.insert({"Name":name})
+#     return redirect("/list")
 
 
 

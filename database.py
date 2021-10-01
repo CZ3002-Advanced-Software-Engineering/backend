@@ -4,125 +4,49 @@ from flask_cors import CORS, cross_origin
 from bson.json_util import dumps, loads
 import os
 from flask_pymongo import PyMongo
-import cv2
-import numpy as np
-import re
-#from PyMongo import MongoClient
-
-from teachers import Teachers
-from courses import Courses
-from students import Students
+from pymongo.errors import ConnectionFailure
+from pymongo import MongoClient
+# import cv2
+# import numpy as np
+# import re
+# from teachers import Teachers
+# from courses import Courses
+# from students import Students
 
 FILE_PATH = os.path.dirname(os.path.realpath(__file__))
-
-
-# mongodb_host = os.environ.get('MONGO_HOST', 'asecluster.mgx31.mongodb.net')
-# mongodb_port = int(os.environ.get('MONGO_PORT', '27017'))
-# client = MongoClient(mongodb_host, mongodb_port)
-# db = client.database
-#data = db.attendancelist
-
 
 # * ---------- Create App --------- *
 app = Flask(__name__)
 
-
 # * ----------MongoDB connect -------*
-#app.config['MONGO_DBNAME'] = 'database'
-app.config["MONGO_URI"] = "mongodb+srv://admin:p%40ssw0rd@asecluster.mgx31.mongodb.net/test/"
-
+app.config["MONGO_URI"] = "mongodb+srv://admin:p%40ssw0rd@asecluster.mgx31.mongodb.net/test"
 mongo = PyMongo(app)
 
-studentCollection = mongo.db.students
-teacherCollection = mongo.db.teachers
-courseCollection = mongo.db.courses
+# * --------MongodbCollection-------*
+studentCollection = mongo.db.student
+teacherCollection = mongo.db.teacher
+courseCollection = mongo.db.course
 attendanceListCollection = mongo.db.attendancelist
-#student = mongo.db.database.student
+
+# * -------MongodbConnectionTest-----*
+client = MongoClient()
+try:
+   client.admin.command('ismaster')
+except ConnectionFailure:
+   print("Server not available")
 
 # * -----------Create routes and functions here ---------
-@app.route("/testing", methods=['GET'])
-def test():
-     a = studentCollection.find({}, {'Gender': 'Female'})
-
-    print (a)
-
-
-    # return("Hello world")
-    
-  #  a = studentCollection.find({'Gender': 'Female'})
-   
-
-# @app.route("take_attendance/manual", methods=['GET'])
-# def lists():
-#     data_1 = data.find()
-    
-#     return ("hello world")
-
-# # @app.route("/")
-# @app.route("/name", methods=['POST'])
-# def name():
-#     name = request.values.get("Name")
-#     data.insert({"Name":name})
-#     return redirect("/list")
 
 
 
+@app.route("/attendance", methods=['GET'])
+def read():
+    #attendance = attendanceListCollection.find({'_id': ObjectId(id)})
+    attendance = attendanceListCollection.find_one()
 
-
-
-
-
-
-# @app.route("/manual", methods = ['GET', 'POST'])
-
-# def read():
-
-
-#     # cursor = student.find()
-#     #  for record in cursor:
-#     #      name = record["First Name"]
-#     #      print(record)
-#     return ('manual.html')
-
-
-# def insert():
-#     name = request.args.get("name")
-#     myVal = {"name" : name}
-#     x = studentCollection.insert_one(myVal)
-#     return render_template("response.html", res = x)
-
-
-# @app.route("/read")
-# def read():
-#     cursor = studentCollection.find()
-#     for record in cursor:
-#         name = record["name"]
-#         print(record)
-#     return render_template("response.html", res = name)
-
-# @app.route("/insert")
-# def insert():
-#     name = request.args.get("name")
-#     myVal = {"name" : name}
-#     x = studentCollection.insert_one(myVal)
-#     return render_template("response.html", res = x)
-
-# @app.route("/delete")
-# def delete():
-#     name = request.args.get("name")
-#     myquery = {"name" : name}
-#     studentCollection.delete_one(myquery)
-#     x = "Record delete"
-#     return render_template("response.html", res = x)
-
-# @app.route("/update")
-# def update():
-#     name = request.args.get("name")
-#     myquery = {"name" : name}
-#     studentCollection.update_one(myquery)
-#     x = "Record updated"
-#     return render_template("response.html", res = x)
-# */
+    print(attendance)
+    # return data
+    return jsonify(attendance)
 
 # To avoid cors erros
 CORS(app, support_credentials=True)

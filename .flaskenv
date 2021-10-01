@@ -1,2 +1,2 @@
 FLASK_ENV=development
-FLASK_APP=sever_app.py
+FLASK_APP=database.py

@@ -30,7 +30,7 @@ jwt = JWTManager(app)
 
 
 # * ----------MongoDB connect -------*
-#app.config["MONGO_URI"] = "mongodb+srv://admin:p%40ssw0rd@asecluster.mgx31.mongodb.net/test/database"
+#app.config["MONGO_URI"] = "mongodb+srv://admin:p%40ssw0rd@asecluster.mgx31.mongodb.net/database"
 #app.config["MONGO_URI"] = "mongodb://localhost:27017/FRAS"
 mongo = PyMongo(app)
 

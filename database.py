@@ -1,4 +1,6 @@
 # * --------- IMPORTS --------- *
+from sys import modules
+from bson.objectid import ObjectId
 from flask import Flask, request, jsonify
 from flask_cors import CORS, cross_origin
 from bson.json_util import dumps, loads
@@ -21,15 +23,27 @@ studentCollection = mongo.db.student
 teacherCollection = mongo.db.teacher
 courseCollection = mongo.db.course
 attendanceListCollection = mongo.db.attendancelist
+modulesCollection = mongo.db.module
 
 # * -----------Create routes and functions here ---------
-@app.route("/attendance", methods=['GET'])
-def read():
-    attendance = attendanceListCollection.find()
-    for x in attendance:
-       print(x)
-       print("for")
-    return ('results')
+
+# Get the course teacher is in-charge and return relevant course detail
+# Course detail : course, date, class, start time, end time, day
+# @app.route("/TeacherAttendance/<id>", methods=['GET'])
+# def getTeacherAttendance(id):
+#     for x in teacherCollection.find_one({'id': id}):
+#         Tcourse = request.args.get('module')
+#         print(Tcourse)
+#     return('result')
+
+# View attendance for Teacher
+@app.route("/ViewAttendance/<module>", methods=['GET'])
+def getTeacherAttendance(module):
+    # Loop in attendance database to get module
+    for x in attendanceListCollection.find({"module": module}):
+        #for y in attendanceListCollection.find({"group": group}):
+        print(x)
+    return ('result')
 
 # To avoid cors erros
 CORS(app, support_credentials=True)

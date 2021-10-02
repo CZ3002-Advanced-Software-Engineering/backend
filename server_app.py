@@ -32,6 +32,7 @@ jwt = JWTManager(app)
 # * ----------MongoDB connect -------*
 #app.config["MONGO_URI"] = "mongodb+srv://admin:p%40ssw0rd@asecluster.mgx31.mongodb.net/database"
 #app.config["MONGO_URI"] = "mongodb://localhost:27017/FRAS"
+app.config["MONGO_URI"] = "mongodb+srv://robinhood:password..12@frasdata.7ea7m.mongodb.net/frasdata?ssl=true&ssl_cert_reqs=CERT_NONE"
 mongo = PyMongo(app)
 
 studentCollection = mongo.db.student
@@ -95,21 +96,29 @@ def login():
 
 @app.route('/upload', methods=['POST'])
 def fileUpload():
-    target=os.path.join(UPLOAD_FOLDER,'test_docs')
-    if not os.path.isdir(target):
-        os.mkdir(target)
-    logger.info("welcome to upload`")
-    file = request.files['file'] 
-    filename = secure_filename(file.filename)
-    destination="/".join([target, filename])
-    file.save(destination)
-    session['uploadFilePath']=destination
-    response="Whatever you wish too return"
+    #target=os.path.join(UPLOAD_FOLDER,'test_docs')
+    #if not os.path.isdir(target):
+        #os.mkdir(target)
+    #logger.info("welcome to upload`")
+    #file = request.files['file'] 
+    #filename = secure_filename(file.filename)
+    #destination="/".join([target, filename])
+    #file.save(destination)
+    #session['uploadFilePath']=destination
+    #response="Whatever you wish too return"
+    if 'file' in request.files:
+        file = request.files['file']
+        mongo.save_file(file.filename, file)
+        return "Done"
+    else:
+        return "submit a file!"
 
-    mongo.save_file(file.filename, file)
-    mongo.db.userdocs.insert({'doc_name': file.filename})
+    
 
-    return response
+    #mongo.save_file(file.filename, file)
+    #mongo.db.userdocs.insert({'doc_name': file.filename})
+
+    #return response
 
   
 

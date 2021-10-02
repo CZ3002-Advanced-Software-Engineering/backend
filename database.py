@@ -1,5 +1,6 @@
 # * --------- IMPORTS --------- *
 from sys import modules
+from typing import List
 from bson.objectid import ObjectId
 from flask import Flask, request, jsonify
 from flask_cors import CORS, cross_origin
@@ -37,13 +38,17 @@ modulesCollection = mongo.db.module
 #     return('result')
 
 # View attendance for Teacher
-@app.route("/ViewAttendance/<module>", methods=['GET'])
-def getTeacherAttendance(module):
-    # Loop in attendance database to get module
+@app.route("/ViewAttendance/<module>/<group>", methods=['GET'])
+def viewTeacherAttendance(module, group):
+    # Loop in attendance database to get specific module
     for x in attendanceListCollection.find({"module": module}):
-        #for y in attendanceListCollection.find({"group": group}):
-        print(x)
-    return ('result')
+        # Check if group in module
+        if group in list(x.values()):
+            # return list of the student in group
+            result = dumps(x)
+            print(result)
+    # Return result in json
+    return (result)
 
 # To avoid cors erros
 CORS(app, support_credentials=True)

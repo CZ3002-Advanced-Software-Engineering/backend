@@ -18,9 +18,9 @@ from werkzeug.utils import secure_filename
 
 FILE_PATH = os.path.dirname(os.path.realpath(__file__))
 
-logging.basicConfig(level=logging.INFO)
+#logging.basicConfig(level=logging.INFO)
 
-logger = logging.getLogger('HELLO WORLD')
+#logger = logging.getLogger('HELLO WORLD')
 
 
 # * ---------- Create App --------- *
@@ -30,9 +30,9 @@ jwt = JWTManager(app)
 
 
 # * ----------MongoDB connect -------*
-#app.config["MONGO_URI"] = "mongodb+srv://admin:p%40ssw0rd@asecluster.mgx31.mongodb.net/database"
+app.config["MONGO_URI"] = "mongodb+srv://admin:p%40ssw0rd@asecluster.mgx31.mongodb.net/database?ssl=true&ssl_cert_reqs=CERT_NONE"
 #app.config["MONGO_URI"] = "mongodb://localhost:27017/FRAS"
-app.config["MONGO_URI"] = "mongodb+srv://robinhood:password..12@frasdata.7ea7m.mongodb.net/frasdata?ssl=true&ssl_cert_reqs=CERT_NONE"
+#app.config["MONGO_URI"] = "mongodb+srv://robinhood:password..12@frasdata.7ea7m.mongodb.net/frasdata?ssl=true&ssl_cert_reqs=CERT_NONE"
 mongo = PyMongo(app)
 
 studentCollection = mongo.db.student
@@ -40,7 +40,7 @@ teacherCollection = mongo.db.users
 moduleCollection = mongo.db.module
 
 #UPLOAD_FOLDER = 'C:\\Users\\USER\\Desktop\\file_upload\\backend\\uploadedfiles'
-ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'])
+#ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'])
 
 
 # * -----------Create routes and functions here ---------
@@ -120,7 +120,7 @@ def fileUpload():
 def getfile(filename):
     return mongo.send_file(filename)
 
-
+# view attendance attempt not sure 
 @app.route('/view_attendance', methods=['POST', 'GET'])
 def viewAttendance():
     if request.method == 'POST':

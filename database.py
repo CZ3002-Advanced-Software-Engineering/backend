@@ -2,7 +2,7 @@
 from sys import modules
 from typing import List
 from bson.objectid import ObjectId
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, make_response
 from flask_cors import CORS, cross_origin
 from bson.json_util import dumps, loads
 import os
@@ -16,7 +16,7 @@ FILE_PATH = os.path.dirname(os.path.realpath(__file__))
 app = Flask(__name__)
 
 # * ----------MongoDB connect -------*
-app.config["MONGO_URI"] = "mongodb+srv://admin:p%40ssw0rd@asecluster.mgx31.mongodb.net/database"
+app.config["MONGO_URI"] = "mongodb+srv://admin:p%40ssw0rd@asecluster.mgx31.mongodb.net/database?ssl=true&ssl_cert_reqs=CERT_NONE"
 mongo = PyMongo(app)
 
 # * --------MongodbCollection-------*
@@ -38,17 +38,22 @@ modulesCollection = mongo.db.module
 #     return('result')
 
 # View attendance for Teacher
-@app.route("/ViewAttendance/<module>/<group>", methods=['GET'])
-def viewTeacherAttendance(module, group):
-    # Loop in attendance database to get specific module
-    for x in attendanceListCollection.find({"module": module}):
-        # Check if group in module
-        if group in list(x.values()):
-            # return list of the student in group
-            result = dumps(x)
-            print(result)
-    # Return result in json
-    return (result)
+@app.route("/ViewAttendance", methods=['GET'])
+def viewTeacherAttendance():
+    module = request.args.get('module')
+    group = request.args.get('group')
+
+    result = []
+    # Loop in attendance database to get specific module and group
+    for entry in attendanceListCollection.find({"module": module, 'group': group}):
+        student_dict = {'id': entry['id'], 'name': entry['name'], 'checkintime': entry['checkintime'],
+                        'attendance': entry['attendance']}
+        # print(student_dict)
+        result.append(student_dict)
+
+    # print(result)
+    response = make_response(jsonify(result))
+    return response
 
 # To avoid cors erros
 CORS(app, support_credentials=True)

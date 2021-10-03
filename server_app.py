@@ -69,29 +69,34 @@ def getAllTeacherinfo():
 #def takeAttendance():
   #face_recognition_total.face_recog()
 
-
+# login authentication for teachers and students maybe
 @app.route('/login', methods=['POST'])
 def login():
-  users = mongo.db.users 
-  email = request.get_json()['email']
-  password = request.get_json()['password']
-  result = ""
+    data = request.get_json()
+    if data['domain'] == 'teacher':
+        users = Teachers(teacherCollection)
+    elif data['domain'] == 'student':
+        users = Students(studentCollection) 
+    email = data['email']
+    password = data['password']
+    result = ""
 
-  response = users.find_one({'email': email})
+    response = users.find_one({'email': email})
 
-  if response:
-      if bcrypt.check_password_hash(response['password'], password):
+    if response:
+      if response['password'] == password:
+
           access_token = create_access_token(identity = {
-              'first_name': response['first_name'],
-              'last_name': response['last_name'],
-              'email': response['email']
+          'name': response['name'],
+              
+          'email': response['email']
             })
           result = jsonify({'token':access_token})
       else:
           result = jsonify({"error":"Invalid username and password"})
-  else:
-      result = jsonify({"result":"No results found"})
-  return result 
+    else:
+        result = jsonify({"result":"No results found"})
+    return result 
 
 # upload file for student
 @app.route('/upload', methods=['POST'])

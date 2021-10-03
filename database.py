@@ -5,6 +5,7 @@ from bson.objectid import ObjectId
 from flask import Flask, request, jsonify, make_response
 from flask_cors import CORS, cross_origin
 from bson.json_util import dumps, loads
+from datetime import date
 import os
 from flask_pymongo import PyMongo
 from pymongo.errors import ConnectionFailure
@@ -16,7 +17,8 @@ FILE_PATH = os.path.dirname(os.path.realpath(__file__))
 app = Flask(__name__)
 
 # * ----------MongoDB connect -------*
-app.config["MONGO_URI"] = "mongodb+srv://admin:p%40ssw0rd@asecluster.mgx31.mongodb.net/database?ssl=true&ssl_cert_reqs=CERT_NONE"
+app.config[
+    "MONGO_URI"] = "mongodb+srv://admin:p%40ssw0rd@asecluster.mgx31.mongodb.net/database?ssl=true&ssl_cert_reqs=CERT_NONE"
 mongo = PyMongo(app)
 
 # * --------MongodbCollection-------*
@@ -25,6 +27,7 @@ teacherCollection = mongo.db.teacher
 courseCollection = mongo.db.course
 attendanceListCollection = mongo.db.attendancelist
 modulesCollection = mongo.db.module
+
 
 # * -----------Create routes and functions here ---------
 
@@ -38,22 +41,75 @@ modulesCollection = mongo.db.module
 #     return('result')
 
 # View attendance for Teacher
-@app.route("/ViewAttendance", methods=['GET'])
+@app.route("/view_attendance", methods=['GET'])
 def viewTeacherAttendance():
-    module = request.args.get('module')
+    course = request.args.get('course')
     group = request.args.get('group')
+    attendance_date = str(request.args.get('date'))
 
+    attendance_rec = attendanceListCollection.find({"date": attendance_date, "course": course, 'group': group})
     result = []
-    # Loop in attendance database to get specific module and group
-    for entry in attendanceListCollection.find({"module": module, 'group': group}):
-        student_dict = {'id': entry['id'], 'name': entry['name'], 'checkintime': entry['checkintime'],
-                        'attendance': entry['attendance']}
-        # print(student_dict)
+
+    # Loop in attendance database to get specific date, module and group
+    for entry in attendance_rec:
+        student_dict = {'class_index': entry['class_index'], 'student_id': entry['student_id'],
+                        'name': entry['name'], 'checkintime': entry['checkintime'], 'attendance': entry['attendance']}
         result.append(student_dict)
 
-    # print(result)
     response = make_response(jsonify(result))
     return response
+
+
+# View attendance for Teacher
+@app.route("/take_attendance/manual", methods=['GET'])
+def takeAttendanceManual():
+    course = request.args.get('course')
+    group = request.args.get('group')
+    current_date = str(date.today())
+    # current_date = '2021-09-15'
+
+    # try to get attendance for today
+    attendance_rec = attendanceListCollection.find({'date': current_date, 'course': course, 'group': group})
+    # copy cursor into list because it will become empty after using once
+    att_copy = list(attendance_rec)
+
+    result = []
+    # if attendance list exists, get the students and return json
+    if att_copy:
+        for entry in att_copy:
+            student_dict = {'class_index': entry['class_index'],
+                            'student_id': entry['student_id'],
+                            'name': entry['name'],
+                            'checkintime': entry['checkintime'],
+                            'attendance': entry['attendance']}
+            result.append(student_dict)
+    else:
+        # get the previous attendance index and add 1 to get new index
+        last_att_entry = attendanceListCollection.find().sort("attendance_id", -1).limit(1)
+        new_att_index = int((list(last_att_entry)[0]['attendance_id'])) + 1
+
+        # find all students under the course and group
+        students = studentCollection.find({'course': course, 'group': group})
+        class_index = 1
+        for student in students:
+            new_att_entry = {'attendance_id': new_att_index,
+                             'class_index': class_index,
+                             'student_id': student['student_id'],
+                             'name': student['name'],
+                             'date': current_date,
+                             'course': course,
+                             'group': group,
+                             'attendance': 'pending',
+                             'checkintime': '-'}
+            # add student into attendance list
+            attendanceListCollection.insert(new_att_entry.copy())
+            # add student into the result to be returned to front
+            result.append(new_att_entry)
+            class_index += 1
+
+    response = make_response(jsonify(result))
+    return response
+
 
 # To avoid cors erros
 CORS(app, support_credentials=True)

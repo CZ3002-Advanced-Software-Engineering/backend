@@ -96,16 +96,6 @@ def login():
 
 @app.route('/upload', methods=['POST'])
 def fileUpload():
-    #target=os.path.join(UPLOAD_FOLDER,'test_docs')
-    #if not os.path.isdir(target):
-        #os.mkdir(target)
-    #logger.info("welcome to upload`")
-    #file = request.files['file'] 
-    #filename = secure_filename(file.filename)
-    #destination="/".join([target, filename])
-    #file.save(destination)
-    #session['uploadFilePath']=destination
-    #response="Whatever you wish too return"
     if 'file' in request.files:
         file = request.files['file']
         mongo.save_file(file.filename, file)
@@ -120,7 +110,17 @@ def fileUpload():
 
     #return response
 
-  
+@app.route('/view_attendance', methods=['POST', 'GET'])
+def viewAttendance():
+    if request.method == 'POST':
+        data = request.get_json()
+        module = data['module']
+        index = data['index']
+        date = data['date']
+
+        result = attendanceCollection.find_one({'module':module, 'index': index, 'date': date})
+        attendanceObj = loads(result)
+        return dumps(attendanceObj)  
 
 
 

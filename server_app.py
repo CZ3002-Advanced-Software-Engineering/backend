@@ -93,7 +93,7 @@ def login():
       result = jsonify({"result":"No results found"})
   return result 
 
-
+# upload file for student
 @app.route('/upload', methods=['POST'])
 def fileUpload():
     if 'file' in request.files:
@@ -109,6 +109,12 @@ def fileUpload():
     #mongo.db.userdocs.insert({'doc_name': file.filename})
 
     #return response
+    
+# get the file maybe
+@app.route('/file/<filename>')
+def getfile(filename):
+    return mongo.send_file(filename)
+
 
 @app.route('/view_attendance', methods=['POST', 'GET'])
 def viewAttendance():

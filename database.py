@@ -22,11 +22,11 @@ app.config[
 mongo = PyMongo(app)
 
 # * --------MongodbCollection-------*
-studentCollection = mongo.db.student
-teacherCollection = mongo.db.teacher
-courseCollection = mongo.db.course
-attendanceListCollection = mongo.db.attendancelist
-modulesCollection = mongo.db.module
+studentCollection = mongo.db.newStudent
+teacherCollection = mongo.db.newTeacher
+courseCollection = mongo.db.newCourses
+attendanceCollection = mongo.db.newAttendance
+indexCollection = mongo.db.newIndexes
 
 
 # * -----------Create routes and functions here ---------
@@ -40,14 +40,28 @@ modulesCollection = mongo.db.module
 #         print(Tcourse)
 #     return('result')
 
+@app.route("/get_teacher_options", methods=['GET'])
+def getTeacherOptions():
+    result = []
+    teacher_id = request.args.get('oid')
+    teacher = teacherCollection.find_one({'_id': ObjectId(teacher_id)})
+    index_oids = teacher['indexes_taught']
+    for index_oid in index_oids:
+        index = indexCollection.find_one({'_id': ObjectId(index_oid)})
+        result.append(dict(index))
+        print(result)
+    response = make_response(jsonify(result))
+    return response
+
+
 # View attendance for Teacher
-@app.route("/view_attendance", methods=['GET'])
+@app.route("/view_teacher_attendance", methods=['GET'])
 def viewTeacherAttendance():
     course = request.args.get('course')
     group = request.args.get('group')
     attendance_date = str(request.args.get('date'))
 
-    attendance_rec = attendanceListCollection.find({"date": attendance_date, "course": course, 'group': group})
+    attendance_rec = attendanceCollection.find({"date": attendance_date, "course": course, 'group': group})
     result = []
 
     # Loop in attendance database to get specific date, module and group
@@ -69,7 +83,7 @@ def takeAttendanceManual():
     # current_date = '2021-09-15'
 
     # try to get attendance for today
-    attendance_rec = attendanceListCollection.find({'date': current_date, 'course': course, 'group': group})
+    attendance_rec = attendanceCollection.find({'date': current_date, 'course': course, 'group': group})
     # copy cursor into list because it will become empty after using once
     att_copy = list(attendance_rec)
 
@@ -85,7 +99,7 @@ def takeAttendanceManual():
             result.append(student_dict)
     else:
         # get the previous attendance index and add 1 to get new index
-        last_att_entry = attendanceListCollection.find().sort("attendance_id", -1).limit(1)
+        last_att_entry = attendanceCollection.find().sort("attendance_id", -1).limit(1)
         new_att_index = int((list(last_att_entry)[0]['attendance_id'])) + 1
 
         # find all students under the course and group
@@ -102,7 +116,7 @@ def takeAttendanceManual():
                              'attendance': 'pending',
                              'checkintime': '-'}
             # add student into attendance list
-            attendanceListCollection.insert(new_att_entry.copy())
+            attendanceCollection.insert(new_att_entry.copy())
             # add student into the result to be returned to front
             result.append(new_att_entry)
             class_index += 1

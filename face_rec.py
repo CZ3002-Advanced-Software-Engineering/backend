@@ -2,6 +2,7 @@ import face_recognition
 import numpy as np
 import os
 import pickle
+from database import studentCollection
 
 
 class FaceRec:
@@ -17,13 +18,15 @@ class FaceRec:
         known_face_names = []
 
         # loop through all images in known-people folder and encode the images
-        # append each image encoding into known_image_encoding and corresponding filename into known_faces_name
+        # append each image encoding into known_image_encoding and corresponding student name into known_faces_name
         for file in os.listdir(self.known_person_path_file):
             if file[0] != '.':
                 known_image = face_recognition.load_image_file(self.known_person_path_file + '/' + file)
                 known_image_encoding = face_recognition.face_encodings(known_image)[0]
                 known_face_encodings.append(known_image_encoding)
-                known_face_names.append(file)
+
+                student = studentCollection.find_one({'image': file})
+                known_face_names.append(student['name'])
 
         # convert the 2 arrays into pickle files to be stored in /encoding folder
         with open(self.encoding_path_file + '/encoding.pkl', 'wb') as f:
@@ -46,7 +49,7 @@ class FaceRec:
         face_locations = face_recognition.face_locations(unknown_image)
         face_encodings = face_recognition.face_encodings(unknown_image, face_locations)
 
-        name = "Nobody"
+        name = "nobody"
 
         # matching unknown image with the image encodings
         for (top, right, bottom, left), face_encoding in zip(face_locations, face_encodings):

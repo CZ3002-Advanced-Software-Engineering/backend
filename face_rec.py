@@ -49,7 +49,7 @@ class FaceRec:
         face_locations = face_recognition.face_locations(unknown_image)
         face_encodings = face_recognition.face_encodings(unknown_image, face_locations)
 
-        name = "Nobody"
+        name = "nobody"
 
         # matching unknown image with the image encodings
         for (top, right, bottom, left), face_encoding in zip(face_locations, face_encodings):

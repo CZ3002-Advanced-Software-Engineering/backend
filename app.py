@@ -42,7 +42,11 @@ def api():
                 im = Image.open(io.BytesIO(base64.b64decode(image)))
                 im.save(directory + '/stranger.jpeg')
 
-                resp = FaceRec('./known-people', './stranger', './encoding').recognize_faces()
+                name = FaceRec('./known-people', './stranger', './encoding').recognize_faces()
+                if name == 'nobody':
+                    resp = 'No Matches Found.'
+                else:
+                    resp = name + 'Attendance Taken'
             except:
                 pass
     stop = time.perf_counter()

@@ -1,15 +1,11 @@
 # * --------- IMPORTS --------- *
-from sys import modules
-from typing import List
 from bson.objectid import ObjectId
-from flask import Flask, request, jsonify, make_response
+from flask import Flask, request, jsonify, make_response, Response
 from flask_cors import CORS, cross_origin
 from bson.json_util import dumps, loads
 from datetime import date
 import os
 from flask_pymongo import PyMongo
-from pymongo.errors import ConnectionFailure
-from pymongo import MongoClient
 
 FILE_PATH = os.path.dirname(os.path.realpath(__file__))
 
@@ -24,21 +20,58 @@ mongo = PyMongo(app)
 # * --------MongodbCollection-------*
 studentCollection = mongo.db.newStudent
 teacherCollection = mongo.db.newTeacher
-courseCollection = mongo.db.newCourses
 attendanceCollection = mongo.db.newAttendance
 indexCollection = mongo.db.newIndexes
 
 
 # * -----------Create routes and functions here ---------
 
-# Get the course teacher is in-charge and return relevant course detail
-# Course detail : course, date, class, start time, end time, day
-# @app.route("/TeacherAttendance/<id>", methods=['GET'])
-# def getTeacherAttendance(id):
-#     for x in teacherCollection.find_one({'id': id}):
-#         Tcourse = request.args.get('module')
-#         print(Tcourse)
-#     return('result')
+# * ----------- General Functions ---------
+
+def getCollection(collection):
+    if collection == 'student':
+        db_collection = studentCollection
+    elif collection == 'teacher':
+        db_collection = teacherCollection
+    elif collection == 'index':
+        db_collection = indexCollection
+    elif collection == 'attendance':
+        db_collection = attendanceCollection
+    else:
+        db_collection = ''
+
+    return db_collection
+
+
+# * ----------- General Routes ---------
+
+# return all documents in specified collection
+# args: collection
+@app.route("/get_all_items", methods=['GET'])
+def getAllItems():
+    collection = request.args.get('collection')
+    db_collection = getCollection(collection)
+    result = db_collection.find({})
+    response = Response(dumps(result), mimetype='application/json')
+    return response
+
+
+# return single document found in specified collection
+# args: oid, collection
+@app.route("/find_by_oid", methods=['GET'])
+def findByOid():
+    oid = request.args.get('oid')
+    collection = request.args.get('collection')
+    db_collection = getCollection(collection)
+
+    if db_collection != '':
+        result = db_collection.find_one({'_id': ObjectId(oid)})
+        response = Response(dumps(result), mimetype='application/json')
+    else:
+        response = {}
+
+    return response
+
 
 @app.route("/get_teacher_options", methods=['GET'])
 def getTeacherOptions():

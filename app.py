@@ -46,7 +46,7 @@ def api():
                 if name == 'nobody':
                     resp = 'No Matches Found.'
                 else:
-                    resp = name + 'Attendance Taken'
+                    resp = name + ' Attendance Taken'
             except:
                 pass
     stop = time.perf_counter()

@@ -1,11 +1,17 @@
 # * --------- IMPORTS --------- *
 from bson.objectid import ObjectId
-from flask import Flask, request, jsonify, make_response, Response
+from flask import Flask, request, Response
 from flask_cors import CORS, cross_origin
 from bson.json_util import dumps, loads
 from datetime import date
-import os
 from flask_pymongo import PyMongo
+import os
+import time
+from face_rec import encode_images, recognize_faces
+from PIL import Image
+import base64
+import io
+import shutil
 
 FILE_PATH = os.path.dirname(os.path.realpath(__file__))
 
@@ -43,6 +49,26 @@ def getCollection(collection):
     return db_collection
 
 
+def genNewAttendance(index_oid, attendance_date, teacher_oid, student_cursors):
+    # consolidate the students into attendance list
+    student_list = []
+    for student in student_cursors:
+        student_list.append({'student': ObjectId(student['_id']),
+                             'status': 'pending',
+                             'documents': '',
+                             'checkintime': '-'})
+
+    # insert new entry into db
+    attendance_rec = {
+        'index': index_oid,
+        'date': attendance_date,
+        'teacher': teacher_oid,
+        'students': student_list
+    }
+    attendanceCollection.insert_one(attendance_rec)
+    return attendance_rec
+
+
 # * ----------- General Routes ---------
 
 # return all documents in specified collection
@@ -73,89 +99,109 @@ def findByOid():
     return response
 
 
-@app.route("/get_teacher_options", methods=['GET'])
-def getTeacherOptions():
-    result = []
-    teacher_id = request.args.get('oid')
-    teacher = teacherCollection.find_one({'_id': ObjectId(teacher_id)})
-    index_oids = teacher['indexes_taught']
-    for index_oid in index_oids:
-        index = indexCollection.find_one({'_id': ObjectId(index_oid)})
-        result.append(dict(index))
-        print(result)
-    response = make_response(jsonify(result))
-    return response
+# * ----------- Attendance Routes ---------
 
-
-# View attendance for Teacher
-@app.route("/view_teacher_attendance", methods=['GET'])
-def viewTeacherAttendance():
+# View class attendance for teacher
+@app.route("/view_class_attendance", methods=['GET'])
+def viewClassAttendance():
     course = request.args.get('course')
     group = request.args.get('group')
     attendance_date = str(request.args.get('date'))
 
-    attendance_rec = attendanceCollection.find({"date": attendance_date, "course": course, 'group': group})
-    result = []
+    # get index oid from course and group provided
+    index_oid = indexCollection.find_one({'course': course, 'group': group})['_id']
 
-    # Loop in attendance database to get specific date, module and group
-    for entry in attendance_rec:
-        student_dict = {'class_index': entry['class_index'], 'student_id': entry['student_id'],
-                        'name': entry['name'], 'checkintime': entry['checkintime'], 'attendance': entry['attendance']}
-        result.append(student_dict)
+    # find attendance record by index oid and date
+    attendance_rec = attendanceCollection.find_one({'index': ObjectId(index_oid), 'date': attendance_date})
 
-    response = make_response(jsonify(result))
+    response = Response(dumps(attendance_rec), mimetype='application/json')
     return response
 
 
-# View attendance for Teacher
+# Take manual attendance
 @app.route("/take_attendance/manual", methods=['GET'])
-def takeAttendanceManual():
+def takeAttendance():
     course = request.args.get('course')
     group = request.args.get('group')
     current_date = str(date.today())
     # current_date = '2021-09-15'
 
-    # try to get attendance for today
-    attendance_rec = attendanceCollection.find({'date': current_date, 'course': course, 'group': group})
-    # copy cursor into list because it will become empty after using once
-    att_copy = list(attendance_rec)
+    # get index oid and look for existing attendance rec for today
+    index_oid = indexCollection.find_one({'course': course, 'group': group})['_id']
+    attendance_rec = attendanceCollection.find_one({'index': index_oid, 'date': current_date})
 
-    result = []
-    # if attendance list exists, get the students and return json
-    if att_copy:
-        for entry in att_copy:
-            student_dict = {'class_index': entry['class_index'],
-                            'student_id': entry['student_id'],
-                            'name': entry['name'],
-                            'checkintime': entry['checkintime'],
-                            'attendance': entry['attendance']}
-            result.append(student_dict)
-    else:
-        # get the previous attendance index and add 1 to get new index
-        last_att_entry = attendanceCollection.find().sort("attendance_id", -1).limit(1)
-        new_att_index = int((list(last_att_entry)[0]['attendance_id'])) + 1
+    # if attendance rec does not exist, create new rec
+    if not attendance_rec:
+        teacher_oid = teacherCollection.find_one({'indexes_taught': index_oid})['_id']
+        student_cursors = studentCollection.find({'indexes_taken': index_oid})
+        attendance_rec = genNewAttendance(index_oid, current_date, teacher_oid, student_cursors)
 
-        # find all students under the course and group
-        students = studentCollection.find({'course': course, 'group': group})
-        class_index = 1
-        for student in students:
-            new_att_entry = {'attendance_id': new_att_index,
-                             'class_index': class_index,
-                             'student_id': student['student_id'],
-                             'name': student['name'],
-                             'date': current_date,
-                             'course': course,
-                             'group': group,
-                             'attendance': 'pending',
-                             'checkintime': '-'}
-            # add student into attendance list
-            attendanceCollection.insert(new_att_entry.copy())
-            # add student into the result to be returned to front
-            result.append(new_att_entry)
-            class_index += 1
-
-    response = make_response(jsonify(result))
+    response = Response(dumps(attendance_rec), mimetype='application/json')
     return response
+
+
+@app.route('/take_attendance/face', methods=['GET'])
+def faceDataPrep():
+    start = time.perf_counter()
+    course = request.args.get('course')
+    group = request.args.get('group')
+    current_date = str(date.today())
+    # current_date = '2021-09-15'
+
+    # get index oid and look for existing attendance rec for today
+    index_oid = indexCollection.find_one({'course': course, 'group': group})['_id']
+    attendance_rec = attendanceCollection.find_one({'index': index_oid, 'date': current_date})
+
+    # get all students in the index
+    student_list = list(studentCollection.find({'indexes_taken': index_oid}))
+
+    # if attendance rec does not exist, create new rec
+    if not attendance_rec:
+        teacher_oid = teacherCollection.find_one({'indexes_taught': index_oid})['_id']
+        attendance_rec = genNewAttendance(index_oid, current_date, teacher_oid, student_list)
+
+    # place student image filename and student name into dict
+    student_dict = {}
+    for student in student_list:
+        student_dict[student['image']] = student['name']
+    encode_images('./known-people', './encoding', student_dict)
+
+    stop = time.perf_counter()
+    print(stop - start)
+    time.sleep(2)
+    response = Response(dumps(attendance_rec), mimetype='application/json')
+    return response
+
+
+@app.route('/face_match', methods=['POST', 'GET'])
+def faceMatch():
+    start = time.perf_counter()
+    data = request.get_json()
+    resp = 'No Matches Found.'
+    unknown_img_dir = './stranger'
+    unknown_img_name = 'stranger.jpeg'
+    if data:
+        if os.path.exists(unknown_img_dir):
+            shutil.rmtree(unknown_img_dir)
+
+        if not os.path.exists(unknown_img_dir):
+            try:
+                os.mkdir(unknown_img_dir)
+                time.sleep(1)
+                result = data['data']
+                b = bytes(result, 'utf-8')
+                image = b[b.find(b'/9'):]
+                im = Image.open(io.BytesIO(base64.b64decode(image)))
+                im.save(unknown_img_dir + '/' + unknown_img_name)
+
+                name = recognize_faces('./encoding', unknown_img_dir, unknown_img_name)
+                if name != 'nobody':
+                    resp = name + ' Attendance Taken'
+            except:
+                pass
+    stop = time.perf_counter()
+    print(stop - start)
+    return resp
 
 
 # To avoid cors erros

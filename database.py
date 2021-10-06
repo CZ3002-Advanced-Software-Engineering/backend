@@ -34,6 +34,7 @@ indexCollection = mongo.db.newIndexes
 
 # * ----------- General Functions ---------
 
+# translate string to mongo collection
 def getCollection(collection):
     if collection == 'student':
         db_collection = studentCollection
@@ -49,6 +50,7 @@ def getCollection(collection):
     return db_collection
 
 
+# create new attendance entry and insert into db
 def genNewAttendance(index_oid, attendance_date, teacher_oid, student_cursors):
     # consolidate the students into attendance list
     student_list = []
@@ -101,7 +103,8 @@ def findByOid():
 
 # * ----------- Attendance Routes ---------
 
-# View class attendance for teacher
+# return the attendance list specified by the course, group and date
+# args: course, group, date (YYYY-MM-DD string)
 @app.route("/view_class_attendance", methods=['GET'])
 def viewClassAttendance():
     course = request.args.get('course')
@@ -118,7 +121,9 @@ def viewClassAttendance():
     return response
 
 
-# Take manual attendance
+# return the attendance list specified by the course, group
+# (create new one and return it if none exists for current session)
+# args: course, group
 @app.route("/take_attendance/manual", methods=['GET'])
 def takeAttendance():
     course = request.args.get('course')
@@ -140,6 +145,8 @@ def takeAttendance():
     return response
 
 
+# return attendance list like manual route but also encode images of students from the session
+# args: course, group
 @app.route('/take_attendance/face', methods=['GET'])
 def faceDataPrep():
     start = time.perf_counter()
@@ -173,11 +180,13 @@ def faceDataPrep():
     return response
 
 
+# return name of students that matches the image sent to the route
+# args: none but must receive base64 encoded image
 @app.route('/face_match', methods=['POST', 'GET'])
 def faceMatch():
     start = time.perf_counter()
     data = request.get_json()
-    resp = 'No Matches Found.'
+    response = 'No Matches Found.'
     unknown_img_dir = './stranger'
     unknown_img_name = 'stranger.jpeg'
     if data:
@@ -196,12 +205,12 @@ def faceMatch():
 
                 name = recognize_faces('./encoding', unknown_img_dir, unknown_img_name)
                 if name != 'nobody':
-                    resp = name + ' Attendance Taken'
+                    response = name + ' Attendance Taken'
             except:
                 pass
     stop = time.perf_counter()
     print(stop - start)
-    return resp
+    return response
 
 
 # To avoid cors erros

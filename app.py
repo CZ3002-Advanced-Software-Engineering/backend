@@ -1,58 +1,33 @@
-from flask import Flask, request
-from flask_cors import CORS
-from face_rec import FaceRec
-from PIL import Image
-import base64
-import io
-import os
-import shutil
-import time
+from flask import Flask, request, url_for, send_file
+from flask_pymongo import PyMongo
 
 app = Flask(__name__)
-CORS(app)
+app.config['MONGO_URI'] = 'mongodb+srv://robinhood:password..12@frasdata.7ea7m.mongodb.net/frasdata?ssl=true&ssl_cert_reqs=CERT_NONE'
+mongo = PyMongo(app)
+
+@app.route('/')
+def index():
+    return '''
+        <form method="POST" action = "/upload" enctype = "multipart/form-data">
+            <input type="text" name="username">
+            <input type="file" name="document">
+            <input type="submit">
+        </form>
+
+    
+    '''
 
 
-@app.route('/encode_images', methods=['GET'])
-def encode():
-    start = time.perf_counter()
-    FaceRec('./known-people', './stranger', './encoding').encode_images()
-    stop = time.perf_counter()
-    print(stop - start)
-    time.sleep(2)
-    return 'Encoding Complete'
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    if 'document' in request.files:
+        document = request.files['document']
+        mongo.save_file(document.filename, document)
+        mongo.db.users.insert({'username':request.form.get('username'), 'document_name': document.filename})
+        return 'Done!'
 
 
-@app.route('/face_match', methods=['POST', 'GET'])
-def api():
-    start = time.perf_counter()
-    data = request.get_json()
-    resp = 'Nobody'
-    directory = './stranger'
-    if data:
-        if os.path.exists(directory):
-            shutil.rmtree(directory)
-
-        if not os.path.exists(directory):
-            try:
-                os.mkdir(directory)
-                time.sleep(1)
-                result = data['data']
-                b = bytes(result, 'utf-8')
-                image = b[b.find(b'/9'):]
-                im = Image.open(io.BytesIO(base64.b64decode(image)))
-                im.save(directory + '/stranger.jpeg')
-
-                name = FaceRec('./known-people', './stranger', './encoding').recognize_faces()
-                if name == 'nobody':
-                    resp = 'No Matches Found.'
-                else:
-                    resp = name + ' Attendance Taken'
-            except:
-                pass
-    stop = time.perf_counter()
-    print(stop - start)
-    return resp
-
-
-if __name__ == '__main__':
-    app.run()
+@app.route('/download/<filename>')
+def getfile(filename):
+    return mongo.send_file(filename) #as_attachment=True#
+    

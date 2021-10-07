@@ -9,7 +9,7 @@ def encode_images(known_person_path_file, encoding_path_file, student_dict):
     known_face_encodings = []
     known_face_names = []
 
-    # loop through all images in known-people folder and encode the images
+    # loop through all images in known-people folder and encode the images of students in student_dict
     # append each image encoding into known_image_encoding and corresponding student name into known_faces_name
     for file in os.listdir(known_person_path_file):
         if file[0] != '.' and file in student_dict.keys():
@@ -18,7 +18,7 @@ def encode_images(known_person_path_file, encoding_path_file, student_dict):
             known_face_encodings.append(known_image_encoding)
             known_face_names.append(student_dict[file])
 
-    # convert the 2 arrays into pickle files to be stored in /encoding folder
+    # store image encodings and names in pickle files to be stored in /encoding folder
     with open(encoding_path_file + '/encoding.pkl', 'wb') as f:
         pickle.dump(known_face_encodings, f)
 

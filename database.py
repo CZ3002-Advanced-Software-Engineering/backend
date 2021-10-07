@@ -3,7 +3,7 @@ from bson.objectid import ObjectId
 from flask import Flask, request, Response
 from flask_cors import CORS, cross_origin
 from bson.json_util import dumps, loads
-from datetime import date
+from datetime import date, datetime
 from flask_pymongo import PyMongo
 import os
 import time
@@ -12,6 +12,7 @@ from PIL import Image
 import base64
 import io
 import shutil
+import pickle
 
 FILE_PATH = os.path.dirname(os.path.realpath(__file__))
 
@@ -69,6 +70,17 @@ def genNewAttendance(index_oid, attendance_date, teacher_oid, student_cursors):
     }
     attendanceCollection.insert_one(attendance_rec)
     return attendance_rec
+
+
+# update the attendance entry of a student
+def updateAttendance(index_oid, attendance_date, student_oid, check_in_time, status):
+    attendanceCollection.find_one_and_update(
+        {'index': index_oid,
+         'date': attendance_date,
+         'students.student': student_oid},
+        {'$set': {'students.$.checkintime': check_in_time,
+                  'students.$.status': status}},
+        upsert=False)
 
 
 # * ----------- General Routes ---------
@@ -171,7 +183,13 @@ def faceDataPrep():
     student_dict = {}
     for student in student_list:
         student_dict[student['image']] = student['name']
+
     encode_images('./known-people', './encoding', student_dict)
+
+    # store session details in pickle file
+    session_details = {'index_oid': index_oid, 'date': current_date}
+    with open('./encoding/session_details.pkl', 'wb') as f:
+        pickle.dump(session_details, f)
 
     stop = time.perf_counter()
     print(stop - start)
@@ -180,11 +198,16 @@ def faceDataPrep():
     return response
 
 
-# return name of students that matches the image sent to the route
+# return name of student that matches the image sent to the route
 # args: none but must receive base64 encoded image
 @app.route('/face_match', methods=['POST', 'GET'])
 def faceMatch():
     start = time.perf_counter()
+
+    # get stored session details
+    with open('./encoding/session_details.pkl', 'rb') as f:
+        session_details = pickle.load(f)
+
     data = request.get_json()
     response = 'No Matches Found.'
     unknown_img_dir = './stranger'
@@ -192,7 +215,6 @@ def faceMatch():
     if data:
         if os.path.exists(unknown_img_dir):
             shutil.rmtree(unknown_img_dir)
-
         if not os.path.exists(unknown_img_dir):
             try:
                 os.mkdir(unknown_img_dir)
@@ -204,10 +226,17 @@ def faceMatch():
                 im.save(unknown_img_dir + '/' + unknown_img_name)
 
                 name = recognize_faces('./encoding', unknown_img_dir, unknown_img_name)
+
                 if name != 'nobody':
+                    check_in_time = datetime.now().strftime('%H:%M:%S %p')
+                    student_oid = studentCollection.find_one({'name': name})['_id']
+                    updateAttendance(session_details['index_oid'], session_details['date'], student_oid,
+                                     check_in_time, 'present')
                     response = name + ' Attendance Taken'
-            except:
-                pass
+            except Exception as e:
+                print(e)
+                response = 'Error Processing'
+
     stop = time.perf_counter()
     print(stop - start)
     return response

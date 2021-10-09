@@ -31,8 +31,6 @@ attendanceCollection = mongo.db.newAttendance
 indexCollection = mongo.db.newIndexes
 
 
-# * -----------Create routes and functions here ---------
-
 # * ----------- General Functions ---------
 
 # translate string to mongo collection
@@ -69,6 +67,15 @@ def genNewAttendance(index_oid, attendance_date, teacher_oid, student_cursors):
         'students': student_list
     }
     attendanceCollection.insert_one(attendance_rec)
+    return attendance_rec
+
+
+# get attendance entry from course, group and date (YYYY-MM-DD string)
+def getAttendance(course, group, attendance_date):
+    # get index oid from course and group provided
+    index_oid = indexCollection.find_one({'course': course, 'group': group})['_id']
+    # find attendance record by index oid and date
+    attendance_rec = attendanceCollection.find_one({'index': ObjectId(index_oid), 'date': attendance_date})
     return attendance_rec
 
 
@@ -113,7 +120,7 @@ def findByOid():
     return response
 
 
-# * ----------- Attendance Routes ---------
+# * ----------- View Attendance Routes ---------
 
 # return the attendance list specified by the course, group and date
 # args: course, group, date (YYYY-MM-DD string)
@@ -123,15 +130,57 @@ def viewClassAttendance():
     group = request.args.get('group')
     attendance_date = str(request.args.get('date'))
 
-    # get index oid from course and group provided
-    index_oid = indexCollection.find_one({'course': course, 'group': group})['_id']
-
-    # find attendance record by index oid and date
-    attendance_rec = attendanceCollection.find_one({'index': ObjectId(index_oid), 'date': attendance_date})
-
+    attendance_rec = getAttendance(course, group, attendance_date)
     response = Response(dumps(attendance_rec), mimetype='application/json')
     return response
 
+
+# return the student's attendance entry specified by the student oid, course, group and date
+# args: student_oid, course, group, date (YYYY-MM-DD string)
+@app.route("/view_student_attendance", methods=['GET'])
+def viewStudentAttendance():
+    student_oid = request.args.get('student_oid')
+    course = request.args.get('course')
+    group = request.args.get('group')
+    attendance_date = str(request.args.get('date'))
+
+    attendance_rec = getAttendance(course, group, attendance_date)
+    student_entry = None
+    # if attendance rec exists, loop through students to find and retrieve the attendance of student
+    if attendance_rec:
+        for student_rec in attendance_rec['students']:
+            if student_rec['student'] == ObjectId(student_oid):
+                student_entry = {
+                    student_rec['status'],
+                    student_rec['documents'],
+                    student_rec['checkintime']
+                }
+
+    response = Response(dumps(student_entry), mimetype='application/json')
+    return response
+
+
+# return the absentees specified by the course, group and date
+# args: course, group, date (YYYY-MM-DD string)
+@app.route("/view_absentees", methods=['GET'])
+def ViewAbsentees():
+    course = request.args.get('course')
+    group = request.args.get('group')
+    attendance_date = str(request.args.get('date'))
+
+    attendance_rec = getAttendance(course, group, attendance_date)
+    absentees = []
+    # if attendance rec exists, loop through students and add absentees to list
+    if attendance_rec:
+        for student_rec in attendance_rec['students']:
+            if student_rec['status'] == 'absent':
+                absentees.append(student_rec)
+
+    response = Response(dumps(absentees), mimetype='application/json')
+    return response
+
+
+# * ----------- Manual Attendance Routes ---------
 
 # return the attendance list specified by the course, group
 # (create new one and return it if none exists for current session)
@@ -156,6 +205,8 @@ def takeAttendance():
     response = Response(dumps(attendance_rec), mimetype='application/json')
     return response
 
+
+# * ----------- Facial Attendance Routes ---------
 
 # return attendance list like manual route but also encode images of students from the session
 # args: course, group

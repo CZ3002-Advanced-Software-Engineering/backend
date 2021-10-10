@@ -1,13 +1,18 @@
 # * --------- IMPORTS --------- *
 from bson.objectid import ObjectId
-from flask import Flask, request, jsonify, make_response, Response
+from flask import Flask, json, request, jsonify, make_response, Response
 from flask_cors import CORS, cross_origin
 from bson.json_util import dumps, loads
 from datetime import date
 import os
 from flask_pymongo import PyMongo
+from json import dumps
+import flask
+from bson import json_util
+from bson.objectid import ObjectId
 
 FILE_PATH = os.path.dirname(os.path.realpath(__file__))
+
 
 # * ---------- Create App --------- *
 app = Flask(__name__)
@@ -66,7 +71,9 @@ def findByOid():
 
     if db_collection != '':
         result = db_collection.find_one({'_id': ObjectId(oid)})
-        response = Response(dumps(result), mimetype='application/json')
+        print(result)
+        #response = Response(dumps(result), mimetype='application/json')
+        #response = json.dumps(result, default=json_util.default)
     else:
         response = {}
 
@@ -94,7 +101,8 @@ def viewTeacherAttendance():
     group = request.args.get('group')
     attendance_date = str(request.args.get('date'))
 
-    attendance_rec = attendanceCollection.find({"date": attendance_date, "course": course, 'group': group})
+    attendance_rec = attendanceCollection.find(
+        {"date": attendance_date, "course": course, 'group': group})
     result = []
 
     # Loop in attendance database to get specific date, module and group
@@ -116,7 +124,8 @@ def takeAttendanceManual():
     # current_date = '2021-09-15'
 
     # try to get attendance for today
-    attendance_rec = attendanceCollection.find({'date': current_date, 'course': course, 'group': group})
+    attendance_rec = attendanceCollection.find(
+        {'date': current_date, 'course': course, 'group': group})
     # copy cursor into list because it will become empty after using once
     att_copy = list(attendance_rec)
 
@@ -156,6 +165,63 @@ def takeAttendanceManual():
 
     response = make_response(jsonify(result))
     return response
+
+
+# @app.route("/")
+# def index():
+#     return '<h1> Hello world database.py </h1>'
+
+
+@app.route("/login", methods=['GET'])
+def getUsers():
+    users = []
+    for doc in studentCollection.find():
+        users.append({
+            '_id': str(ObjectId(doc['_id'])),
+            'username': doc['username'],
+            'password': doc['password'],
+            'name': doc['name'],
+            'gender': doc['gender'],
+            # 'indexes_taken': str(ObjectId(doc['_id'])),
+            'image': doc['image'],
+        })
+    return jsonify(users)
+
+
+@app.route("/login/teacher", methods=['GET'])
+def getTeachers():
+    users = []
+    docs_list = list(mongo.db.newTeacher.find())
+    return json.dumps(docs_list, default=json_util.default)
+
+# /get_data/<id>/collection
+
+
+# @app.route("/get_data/<id>")
+# def check(id):
+#     doc = mongo.db.newTeacher.find_one({'_id': ObjectId(id)})
+#     return json.dumps(doc, default=json_util.default)
+
+
+@app.route("/get_data/<id>")
+def check(id):
+    collection = getCollection(id.split('=')[0])
+    oid = id.split('=')[1]
+    doc = collection.find_one({'_id': ObjectId(oid)})
+    return json.dumps(doc, default=json_util.default)
+
+
+@app.route('/api/')
+def home():
+    return {'Hello': 'world'}, 200
+
+
+@app.route('/username', methods=['POST'])
+def login():
+    username = request.json["username"]
+    for doc in studentCollection.find():
+        if doc['username'] == request.form.get("username", ""):
+            return jsonify(username=username)
 
 
 # To avoid cors erros

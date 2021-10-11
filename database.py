@@ -11,11 +11,20 @@ import flask
 from bson import json_util
 from bson.objectid import ObjectId
 
-FILE_PATH = os.path.dirname(os.path.realpath(__file__))
 
+class MyEncoder(json.JSONEncoder):
+
+    def default(self, obj):
+        if isinstance(obj, ObjectId):
+            return str(obj)
+        return super(MyEncoder, self).default(obj)
+
+
+FILE_PATH = os.path.dirname(os.path.realpath(__file__))
 
 # * ---------- Create App --------- *
 app = Flask(__name__)
+app.json_encoder = MyEncoder
 
 # * ----------MongoDB connect -------*
 app.config[
@@ -56,9 +65,8 @@ def getCollection(collection):
 def getAllItems():
     collection = request.args.get('collection')
     db_collection = getCollection(collection)
-    result = db_collection.find({})
-    response = Response(dumps(result), mimetype='application/json')
-    return response
+    docs_list = list(db_collection.find())
+    return json.dumps(docs_list, default=json_util.default)
 
 
 # return single document found in specified collection
@@ -72,8 +80,8 @@ def findByOid():
     if db_collection != '':
         result = db_collection.find_one({'_id': ObjectId(oid)})
         print(result)
-        #response = Response(dumps(result), mimetype='application/json')
-        #response = json.dumps(result, default=json_util.default)
+        # response = Response(dumps(result), mimetype='application/json')
+        # response = json.dumps(result, default=json_util.default)
     else:
         response = {}
 
@@ -167,40 +175,23 @@ def takeAttendanceManual():
     return response
 
 
-# @app.route("/")
-# def index():
-#     return '<h1> Hello world database.py </h1>'
-
-
-@app.route("/login", methods=['GET'])
-def getUsers():
+@app.route("/login/student", methods=['GET'])
+def getStudents():
     users = []
-    for doc in studentCollection.find():
-        users.append({
-            '_id': str(ObjectId(doc['_id'])),
-            'username': doc['username'],
-            'password': doc['password'],
-            'name': doc['name'],
-            'gender': doc['gender'],
-            # 'indexes_taken': str(ObjectId(doc['_id'])),
-            'image': doc['image'],
-        })
-    return jsonify(users)
+    docs_list = list(mongo.db.newStudent.find())
+    return json.dumps(docs_list, default=json_util.default)
 
 
 @app.route("/login/teacher", methods=['GET'])
 def getTeachers():
-    users = []
-    docs_list = list(mongo.db.newTeacher.find())
-    return json.dumps(docs_list, default=json_util.default)
+    domain = request.args.get('domain')
+    db_collection = getCollection(domain)
 
-# /get_data/<id>/collection
-
-
-# @app.route("/get_data/<id>")
-# def check(id):
-#     doc = mongo.db.newTeacher.find_one({'_id': ObjectId(id)})
-#     return json.dumps(doc, default=json_util.default)
+    username = request.args.get('username')
+    password = request.args.get('password')
+    user = mongo.db.newTeacher.find_one({'username': username, 'password': password})
+    print(jsonify(user))
+    return jsonify(user)
 
 
 @app.route("/get_data/<id>")
@@ -209,11 +200,6 @@ def check(id):
     oid = id.split('=')[1]
     doc = collection.find_one({'_id': ObjectId(oid)})
     return json.dumps(doc, default=json_util.default)
-
-
-@app.route('/api/')
-def home():
-    return {'Hello': 'world'}, 200
 
 
 @app.route('/username', methods=['POST'])

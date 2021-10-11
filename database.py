@@ -59,13 +59,18 @@ def getCollection(collection):
 
 # * ----------- General Routes ---------
 
-# return all documents in specified collection
-# args: collection
+# return all documents with the specified ids in specified collection
+# args: collection, oids
 @app.route("/get_all_items", methods=['GET'])
 def getAllItems():
+    docs_list = []
     collection = request.args.get('collection')
+    ids = json.loads(request.args.get('id'))
     db_collection = getCollection(collection)
-    docs_list = list(db_collection.find())
+    for entry in ids:
+        doc = db_collection.find_one({'_id': ObjectId(entry)})
+        docs_list.append(doc)
+    # docs_list = list(db_collection.find({'_id': id}))
     return json.dumps(docs_list, default=json_util.default)
 
 

@@ -175,23 +175,18 @@ def takeAttendanceManual():
     return response
 
 
-@app.route("/login/student", methods=['GET'])
-def getStudents():
-    users = []
-    docs_list = list(mongo.db.newStudent.find())
-    return json.dumps(docs_list, default=json_util.default)
-
-
-@app.route("/login/teacher", methods=['GET'])
-def getTeachers():
+@app.route("/login", methods=['GET'])
+def getUser():
     domain = request.args.get('domain')
     db_collection = getCollection(domain)
 
     username = request.args.get('username')
     password = request.args.get('password')
-    user = mongo.db.newTeacher.find_one({'username': username, 'password': password})
-    print(jsonify(user))
-    return jsonify(user)
+    user = db_collection.find_one({'username': username, 'password': password})
+    if user:
+        return jsonify(user)
+    else:
+        return Response(status=400)
 
 
 @app.route("/get_data/<id>")

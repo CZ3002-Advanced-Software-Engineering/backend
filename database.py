@@ -187,6 +187,17 @@ def getUsers():
         })
     return jsonify(users)
 
+# returns the whole database.newStudent
+
+
+@app.route("/login/student", methods=['GET'])
+def getStudents():
+    users = []
+    docs_list = list(mongo.db.newStudent.find())
+    return json.dumps(docs_list, default=json_util.default)
+
+# returns the whole database.newTeacher
+
 
 @app.route("/login/teacher", methods=['GET'])
 def getTeachers():

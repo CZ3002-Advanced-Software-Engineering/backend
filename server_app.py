@@ -30,13 +30,15 @@ jwt = JWTManager(app)
 
 
 # * ----------MongoDB connect -------*
-#app.config["MONGO_URI"] = "mongodb+srv://admin:p%40ssw0rd@asecluster.mgx31.mongodb.net/test/database"
+app.config["MONGO_URI"] = "mongodb+srv://admin:p%40ssw0rd@asecluster.mgx31.mongodb.net/database?ssl=true&ssl_cert_reqs=CERT_NONE"
 #app.config["MONGO_URI"] = "mongodb://localhost:27017/FRAS"
 mongo = PyMongo(app)
 
 studentCollection = mongo.db.student
 teacherCollection = mongo.db.users
 moduleCollection = mongo.db.module
+attendanceCollection = mongo.db.attendancelist
+docCollection = mongo.db.docs
 
 #UPLOAD_FOLDER = 'C:\\Users\\USER\\Desktop\\file_upload\\backend\\uploadedfiles'
 ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'])
@@ -95,10 +97,37 @@ def login():
         result = jsonify({"result":"No results found"})
     return result 
 
+# upload a file with respect to current database, not sure
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    name = request.args.get('name')
+    course = request.args.get('course')
+    group = request.args.get('index')
+    status = request.args.get('status')
+    date = request.args.get('date')
 
+    resp_student = attendanceCollection.find_one({'name': name, 'course': course, 'group': group, 'date': date, 'attendance': status})
+    
+    if 'document' in request.files:
+        document = request.files['document']
+        mongo.save_file(document.filename, document)
+        docCollection.insert_one({'name': name, 'doc_name': document.filename,'date': date}) 
+        doc_oid = docCollection.find_one({'name': name, 'doc_name': document.filename, 'date': date})['_id']
+        resp_student['documents'] = doc_oid # or ObjectId(doc_oid)???
+        #update into attendancelist the id of document
+        
+        return "Uploaded Successfully!"
 
   
+# direct link to download file by fileid
+@app.route('/download/<fileid>')
+def getfile(fileid):
+    query = {'_id': ObjectId(fileid)}
+    cursor = docCollection.find_one(query)
+    fileName = cursor['document_name']
 
+    #filename = docCollection.find_one({'index': ObjectId(doc_oid)})
+    return mongo.send_file(fileName) #as_attachment=True#
 
 
 

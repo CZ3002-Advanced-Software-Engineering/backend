@@ -45,24 +45,7 @@ ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'])
 
 
 # * -----------Create routes and functions here ---------
-@app.route('/teacher_info', methods=['GET'])
-def getAllTeacherinfo():
-  teachers = []
-  for doc in teacherCollection.find():
-        teachers.append({
-            '_id': str(ObjectId(doc['_id'])),
-            'name': doc['name'],
-            'email': doc['email'],
-            'courses': doc['courses']
-        })
-  return jsonify(teachers)
-  #teacher = teacherCollection.find_one({'_id': ObjectId(id)})
-  #teacher = Teachers(teacherCollection)
-  #teacher = teacher.getTeacher(id)
-  #print(teacher)
-  #return jsonify({
-      #'name': teacher['name'],
-      #'courses': teacher['courses'],
+
       
 
 

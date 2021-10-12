@@ -34,8 +34,12 @@ def upload_file():
         #return dumps(document_id)
         return "Done!"
 
-#inorder to get attachment link for download href tag must be created in the frontend section
-@app.route('/download/<studentname>/<filename>')
-def getfile(filename):
-    return mongo.send_file(filename) #as_attachment=True#
-    
+# direct link to download file by fileid
+@app.route('/download/<fileid>')
+def getfile(fileid):
+    query = {'_id': ObjectId(fileid)}
+    cursor = usersCollection.find_one(query)
+    fileName = cursor['document_name']
+
+    #filename = docCollection.find_one({'index': ObjectId(doc_oid)})
+    return mongo.send_file(fileName) #as_attachment=True#

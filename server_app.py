@@ -97,20 +97,22 @@ def upload_file():
         docCollection.insert_one({'name': name, 'doc_name': document.filename,'date': date}) 
         doc_oid = docCollection.find_one({'name': name, 'doc_name': document.filename, 'date': date})['_id']
         resp_student['documents'] = doc_oid # or ObjectId(doc_oid)???
-        #update into attendancelist the id of document
+        # need to do update into attendancelist the id of document in mongodb
         
         return "Uploaded Successfully!"
 
   
 # direct link to download file by fileid
-@app.route('/download/<fileid>')
-def getfile(fileid):
+@app.route('/download/', methods = ['GET', 'POST'])
+def getfile():
+    fileid = request.args.get('fileid')
     query = {'_id': ObjectId(fileid)}
     cursor = docCollection.find_one(query)
-    fileName = cursor['document_name']
+    fileName = cursor['doc_name']
 
     #filename = docCollection.find_one({'index': ObjectId(doc_oid)})
     return mongo.send_file(fileName) #as_attachment=True#
+    
 
 
 

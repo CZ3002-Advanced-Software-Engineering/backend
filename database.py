@@ -106,8 +106,8 @@ def updateAttendance(index_oid, attendance_date, student_oid, check_in_time, sta
 
 # * ----------- General Routes ---------
 
-# return all documents in specified collection
-# args: collection
+# return documents with ids in specified collection
+# args: collection, ids
 @app.route("/get_all_items", methods=['GET'])
 def getAllItems():
     docs_list = []
@@ -193,8 +193,9 @@ def ViewAbsentees():
             if student_rec['status'] == 'absent':
                 absentees.append(student_rec)
 
-    response = Response(dumps(absentees), mimetype='application/json')
-    return response
+    # response = Response(dumps(absentees), mimetype='application/json')
+    return jsonify(absentees)
+    # return response
 
 
 # * ----------- Manual Attendance Routes ---------

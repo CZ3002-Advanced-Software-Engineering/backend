@@ -3,19 +3,19 @@ from bson.objectid import ObjectId
 from flask import Flask, json, request, jsonify, make_response, Response
 from flask_cors import CORS, cross_origin
 from bson.json_util import dumps, loads
+from bson import json_util
 from datetime import date, datetime
 from flask_pymongo import PyMongo
 import os
 import time
-from face_rec import encode_images, recognize_faces
-from PIL import Image
+# from face_rec import encode_images, recognize_faces
+# from PIL import Image
 import base64
 import io
 import shutil
 import pickle
 from json import dumps
 import flask
-from bson import json_util
 from bson.objectid import ObjectId
 
 
@@ -149,8 +149,7 @@ def viewClassAttendance():
     attendance_date = str(request.args.get('date'))
 
     attendance_rec = getAttendance(course, group, attendance_date)
-    response = Response(dumps(attendance_rec), mimetype='application/json')
-    return response
+    return jsonify(attendance_rec)
 
 
 # return the student's attendance entry specified by the student oid, course, group and date

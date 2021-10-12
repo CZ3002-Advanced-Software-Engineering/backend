@@ -59,13 +59,18 @@ def getCollection(collection):
 
 # * ----------- General Routes ---------
 
-# return all documents in specified collection
-# args: collection
+# return all documents with the specified ids in specified collection
+# args: collection, oids
 @app.route("/get_all_items", methods=['GET'])
 def getAllItems():
+    docs_list = []
     collection = request.args.get('collection')
+    ids = json.loads(request.args.get('id'))
     db_collection = getCollection(collection)
-    docs_list = list(db_collection.find())
+    for entry in ids:
+        doc = db_collection.find_one({'_id': ObjectId(entry)})
+        docs_list.append(doc)
+    # docs_list = list(db_collection.find({'_id': id}))
     return json.dumps(docs_list, default=json_util.default)
 
 
@@ -175,34 +180,18 @@ def takeAttendanceManual():
     return response
 
 
-@app.route("/login/student", methods=['GET'])
-def getStudents():
-    users = []
-    docs_list = list(mongo.db.newStudent.find())
-    return json.dumps(docs_list, default=json_util.default)
-
-# returns the whole database.newStudent
-
-
-@app.route("/login/student", methods=['GET'])
-def getStudents():
-    users = []
-    docs_list = list(mongo.db.newStudent.find())
-    return json.dumps(docs_list, default=json_util.default)
-
-# returns the whole database.newTeacher
-
-
-@app.route("/login/teacher", methods=['GET'])
-def getTeachers():
+@app.route("/login", methods=['GET'])
+def getUser():
     domain = request.args.get('domain')
     db_collection = getCollection(domain)
 
     username = request.args.get('username')
     password = request.args.get('password')
-    user = mongo.db.newTeacher.find_one({'username': username, 'password': password})
-    print(jsonify(user))
-    return jsonify(user)
+    user = db_collection.find_one({'username': username, 'password': password})
+    if user:
+        return jsonify(user)
+    else:
+        return Response(status=400)
 
 
 @app.route("/get_data/<id>")

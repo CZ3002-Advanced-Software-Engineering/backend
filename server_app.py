@@ -103,9 +103,9 @@ def upload_file():
 
   
 # direct link to download file by fileid
-@app.route('/download/', methods = ['GET', 'POST'])
-def getfile():
-    fileid = request.args.get('fileid')
+@app.route('/download/fileid')
+def getfile(fileid):
+    #fileid = request.args.get('fileid')
     query = {'_id': ObjectId(fileid)}
     cursor = docCollection.find_one(query)
     fileName = cursor['doc_name']

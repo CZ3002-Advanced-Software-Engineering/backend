@@ -89,15 +89,17 @@ def upload_file():
     status = request.args.get('status')
     date = request.args.get('date')
 
-    resp_student = attendanceCollection.find_one({'name': name, 'course': course, 'group': group, 'date': date, 'attendance': status})
+    #resp_student = attendanceCollection.find_one({'name': name, 'course': course, 'group': group, 'date': date, 'attendance': status})
     
     if 'document' in request.files:
         document = request.files['document']
         mongo.save_file(document.filename, document)
         docCollection.insert_one({'name': name, 'doc_name': document.filename,'date': date}) 
         doc_oid = docCollection.find_one({'name': name, 'doc_name': document.filename, 'date': date})['_id']
-        resp_student['documents'] = doc_oid # or ObjectId(doc_oid)???
-        # need to do update into attendancelist the id of document in mongodb
+        #resp_student['documents'] = doc_oid # or ObjectId(doc_oid)???
+        attendanceCollection.find_one_and_update({'name': name, 'course': course, 'group': group, 'date': date, 'attendance': status},
+                                                 {'$set': {'documents': ObjectId(doc_oid)}}, upsert = True)
+        # update into attendancelist the id of document in mongodb part not sure
         
         return "Uploaded Successfully!"
 

@@ -225,8 +225,9 @@ def takeAttendance():
         attendance_rec = genNewAttendance(
             index_oid, current_date, teacher_oid, student_cursors)
 
-    response = Response(dumps(attendance_rec), mimetype='application/json')
-    return response
+    #response = Response(dumps(attendance_rec), mimetype='application/json')
+    # return response
+    return jsonify(attendance_rec)
 
 
 # * ----------- Facial Attendance Routes ---------
@@ -373,6 +374,48 @@ def getSession():
         return jsonify(full_session)
     else:
         return jsonify({'msg': 'session not available'})
+
+
+@app.route("/kevin/manual", methods=['PUT'])
+def takeAttendanceKevin():
+    #course = request.args.get('course')
+    #group = request.args.get('group')
+    course = "CZ3002"
+    group = "TS1"
+    incoming_attendance = ["615abd43789fb41cf8fd3269:present", "615abd43789fb41cf8fd326a:absent",
+                           "615abd43789fb41cf8fd326c:present", "615b0e7f9e476147bdc53d31:absent"]
+    current_date = str(date.today())
+    # current_date = '2021-09-15'
+
+    # get index oid and look for existing attendance rec for today
+    index_oid = indexCollection.find_one(
+        {'course': course, 'group': group})['_id']
+    attendance_rec = attendanceCollection.find_one(
+        {'index': index_oid, 'date': current_date})
+
+    # if attendance rec does not exist, create new rec
+    if not attendance_rec:
+        teacher_oid = teacherCollection.find_one(
+            {'indexes_taught': index_oid})['_id']
+        student_cursors = studentCollection.find({'indexes_taken': index_oid})
+        attendance_rec = genNewAttendance(
+            index_oid, current_date, teacher_oid, student_cursors)
+
+    for each_student in incoming_attendance:
+        student_id = each_student.split(":")[0]
+        attendance = each_student.split(":")[1]
+        print('student id')
+        print(student_id)
+        print('attendance present or absent')
+        print(attendance)
+
+        attendanceCollection.update_one({'_id': ObjectId(attendance_rec['_id']), 'students': {'$elemMatch': {
+            'student': ObjectId(student_id)}}}, {'$set': {'students.$.status': attendance}})
+
+    updated_session = attendanceCollection.find_one(
+        {'_id': ObjectId(attendance_rec['_id'])})
+
+    return jsonify(updated_session)
 
 
 @app.route("/get_data/<id>")

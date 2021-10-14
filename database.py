@@ -331,6 +331,8 @@ def getUser():
 
 # put method to update attendance session by objectid
 
+# test
+
 
 @app.route("/update_attendance", methods=['PUT'])
 def getSession():

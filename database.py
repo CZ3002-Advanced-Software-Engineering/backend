@@ -15,7 +15,6 @@ import io
 import shutil
 import pickle
 from json import dumps
-import flask
 from bson.objectid import ObjectId
 
 
@@ -173,29 +172,35 @@ def viewStudentAttendance():
                     student_rec['checkintime']
                 }
 
-    response = Response(dumps(student_entry), mimetype='application/json')
-    return response
+    return jsonify(student_entry)
 
 
-# return the absentees specified by the course, group and date
-# args: course, group, date (YYYY-MM-DD string)
+# return the absentees specified by the teacher's indexes
+# args: teacher_oid
 @app.route("/view_absentees", methods=['GET'])
-def ViewAbsentees():
-    course = request.args.get('course')
-    group = request.args.get('group')
-    attendance_date = str(request.args.get('date'))
+def viewAbsentees():
+    teacher_oid = request.args.get('teacher_oid')
+    indexes_taught = teacherCollection.find_one({'_id': ObjectId(teacher_oid)})['indexes_taught']
 
-    attendance_rec = getAttendance(course, group, attendance_date)
     absentees = []
-    # if attendance rec exists, loop through students and add absentees to list
-    if attendance_rec:
-        for student_rec in attendance_rec['students']:
-            if student_rec['status'] == 'absent':
-                absentees.append(student_rec)
+    # if indexes exist, loop through indexes and get all attendances
+    if indexes_taught:
+        for index_oid in indexes_taught:
+            attendances = list(attendanceCollection.find({'index': index_oid}))
+            # if attendance records exist, loop through students in each attendance and add absentees to list
+            if attendances:
+                for attendance_rec in attendances:
+                    for student_rec in attendance_rec['students']:
+                        if student_rec['status'] == 'absent':
+                            entry = {
+                                'index': attendance_rec['index'],
+                                'date': attendance_rec['date'],
+                                'student': student_rec['student'],
+                                'documents': student_rec['documents']
+                            }
+                            absentees.append(entry)
 
-    # response = Response(dumps(absentees), mimetype='application/json')
     return jsonify(absentees)
-    # return response
 
 
 # * ----------- Manual Attendance Routes ---------
@@ -208,7 +213,6 @@ def takeAttendance():
     course = request.args.get('course')
     group = request.args.get('group')
     current_date = str(date.today())
-    # current_date = '2021-09-15'
 
     # get index oid and look for existing attendance rec for today
     index_oid = indexCollection.find_one({'course': course, 'group': group})['_id']
@@ -220,8 +224,7 @@ def takeAttendance():
         student_cursors = studentCollection.find({'indexes_taken': index_oid})
         attendance_rec = genNewAttendance(index_oid, current_date, teacher_oid, student_cursors)
 
-    response = Response(dumps(attendance_rec), mimetype='application/json')
-    return response
+    return jsonify(attendance_rec)
 
 
 # * ----------- Facial Attendance Routes ---------
@@ -263,8 +266,7 @@ def faceDataPrep():
     stop = time.perf_counter()
     print(stop - start)
     time.sleep(2)
-    response = Response(dumps(attendance_rec), mimetype='application/json')
-    return response
+    return jsonify(attendance_rec)
 
 
 # return name of student that matches the image sent to the route

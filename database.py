@@ -2,14 +2,12 @@
 from bson.objectid import ObjectId
 from flask import Flask, json, request, jsonify, make_response, Response
 from flask_cors import CORS, cross_origin
-from bson.json_util import dumps, loads
 from bson import json_util
+from bson.json_util import dumps, loads
 from datetime import date, datetime
 from flask_pymongo import PyMongo
 import os
 import time
-# from face_rec import encode_images, recognize_faces
-# from PIL import Image
 import base64
 import io
 import shutil
@@ -191,10 +189,14 @@ def viewAbsentees():
             # if attendance records exist, loop through students in each attendance and add absentees to list
             if attendances:
                 for attendance_rec in attendances:
+                    index_name = indexCollection.find_one({'_id': attendance_rec['index']})['group']
+                    course_name = indexCollection.find_one({'_id': attendance_rec['index']})['course']
                     for student_rec in attendance_rec['students']:
                         if student_rec['status'] == 'absent':
                             entry = {
-                                'index': attendance_rec['index'],
+                                'id': attendance_rec['_id'],
+                                'index': index_name,
+                                'course': course_name,
                                 'date': attendance_rec['date'],
                                 'student': student_rec['student'],
                                 'documents': student_rec['documents']
@@ -335,33 +337,36 @@ def check(id):
     doc = collection.find_one({'_id': ObjectId(oid)})
     return json.dumps(doc, default=json_util.default)
 
-#Upload file and update documents id into newAttendance
+
+# Upload file and update documents id into newAttendance
 @app.route('/upload', methods=['POST'])
 def upload_file():
-    #name = request.args.get('name')
-    #course = request.args.get('course')
-    #group = request.args.get('index')
-    #status = request.args.get('status')
-    #date = request.args.get('date')
+    # name = request.args.get('name')
+    # course = request.args.get('course')
+    # group = request.args.get('index')
+    # status = request.args.get('status')
+    # date = request.args.get('date')
     student_id = request.args.get('student_id')
     attendance_id = request.args.get('attendance_id')
-  
+
     if 'document' in request.files:
         document = request.files['document']
         mongo.save_file(document.filename, document)
-        docCollection.insert_one({'student_id': ObjectId(student_id), 'attendance_id': Object(attendance_id), 'doc_name': document.filename}) 
-        doc_oid = docCollection.find_one({'student_id': ObjectId(student_id), 'doc_name': document.filename, 'attendance_id': ObjectId(attendance_id)})['_id']
+        docCollection.insert_one(
+            {'student_id': ObjectId(student_id), 'attendance_id': Object(attendance_id), 'doc_name': document.filename})
+        doc_oid = docCollection.find_one({'student_id': ObjectId(student_id), 'doc_name': document.filename,
+                                          'attendance_id': ObjectId(attendance_id)})['_id']
         attendanceCollection.find_one_and_update({'_id': ObjectId(attendance_id), 'student': ObjectId(student_id)},
-                                                 {'$set': {'documents': ObjectId(doc_oid)}}, upsert = True)
+                                                 {'$set': {'documents': ObjectId(doc_oid)}}, upsert=True)
         # update into attendancelist the id of document in mongodb part not sure
-        
+
         return "Uploaded Successfully!"
 
-  
+
 # direct link to download file by fileid
 @app.route('/download/<fileid>')
 def getfile(fileid):
-    try: 
+    try:
         query = {'_id': ObjectId(fileid)}
         cursor = docCollection.find_one(query)
         fileName = cursor['doc_name']

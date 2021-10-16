@@ -168,9 +168,9 @@ def viewStudentAttendance():
         for student_rec in attendance_rec['students']:
             if student_rec['student'] == ObjectId(student_oid):
                 student_entry = {
-                    student_rec['status'],
-                    student_rec['documents'],
-                    student_rec['checkintime']
+                    'status': student_rec['status'],
+                    'documents': student_rec['documents'],
+                    'checkintime': student_rec['checkintime']
                 }
 
     return jsonify(student_entry)

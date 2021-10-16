@@ -90,7 +90,7 @@ def upload_file():
     if 'document' in request.files:
         document = request.files['document']
         mongo.save_file(document.filename, document)
-        docCollection.insert_one({'student_id': ObjectId(student_id), 'attendance_id': Object(attendance_id), 'doc_name': document.filename}) 
+        docCollection.insert_one({'student_id': ObjectId(student_id), 'attendance_id': ObjectId(attendance_id), 'doc_name': document.filename}) 
         doc_oid = docCollection.find_one({'student_id': ObjectId(student_id), 'doc_name': document.filename, 'attendance_id': ObjectId(attendance_id)})['_id']
         #resp_student['documents'] = doc_oid # or ObjectId(doc_oid)???
         attendanceCollection.find_one_and_update({'_id': ObjectId(attendance_id), 'student': ObjectId(student_id)},

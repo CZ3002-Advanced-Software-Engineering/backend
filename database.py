@@ -335,27 +335,6 @@ def check(id):
     doc = collection.find_one({'_id': ObjectId(oid)})
     return json.dumps(doc, default=json_util.default)
 
-#Upload file and update documents id into newAttendance
-@app.route('/upload', methods=['POST'])
-def upload_file():
-    #name = request.args.get('name')
-    #course = request.args.get('course')
-    #group = request.args.get('index')
-    #status = request.args.get('status')
-    #date = request.args.get('date')
-    student_id = request.args.get('student_id')
-    attendance_id = request.args.get('attendance_id')
-  
-    if 'document' in request.files:
-        document = request.files['document']
-        mongo.save_file(document.filename, document)
-        docCollection.insert_one({'student_id': ObjectId(student_id), 'attendance_id': Object(attendance_id), 'doc_name': document.filename}) 
-        doc_oid = docCollection.find_one({'student_id': ObjectId(student_id), 'doc_name': document.filename, 'attendance_id': ObjectId(attendance_id)})['_id']
-        attendanceCollection.find_one_and_update({'_id': ObjectId(attendance_id), 'student': ObjectId(student_id)},
-                                                 {'$set': {'documents': ObjectId(doc_oid)}}, upsert = True)
-        # update into attendancelist the id of document in mongodb part not sure
-        
-        return "Uploaded Successfully!"
 
   
 # direct link to download file by fileid

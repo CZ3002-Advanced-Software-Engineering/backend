@@ -120,7 +120,8 @@ def getAllItems():
         doc = db_collection.find_one({'_id': ObjectId(entry)})
         docs_list.append(doc)
     # docs_list = list(db_collection.find({'_id': id}))
-    return json.dumps(docs_list, default=json_util.default)
+    # return json.dumps(docs_list, default=json_util.default)
+    return jsonify(docs_list)
 
 
 # return single document found in specified collection

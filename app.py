@@ -7,6 +7,7 @@ mongo = PyMongo(app)
 
 usersCollection = mongo.db.users
 docCollection = mongo.db.docs
+attendanceCollection = mongo.db.attendancelist
 
 
 @app.route('/')

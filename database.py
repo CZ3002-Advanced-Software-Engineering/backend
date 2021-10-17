@@ -213,6 +213,35 @@ def viewAbsentees():
     return jsonify(absentees)
 
 
+@app.route("/view_student_absent", methods=['GET'])
+def view_student_absent():
+    student_id = request.args.get('student_oid')
+    indexes = studentCollection.find_one({'_id': ObjectId(student_id)})['indexes_taken']
+
+    absentees = []
+
+    if indexes:
+        for index in indexes:
+            attendances = list(attendanceCollection.find({'index': index}))
+            if attendances:
+                for attendance_rec in attendances:
+                    index_name = indexCollection.find_one({'_id': attendance_rec['index']})['group']
+                    course_name = indexCollection.find_one({'_id': attendance_rec['index']})['course']
+                    for student_rec in attendance_rec['students']:
+                        if student_rec['student'] == ObjectId(student_id):
+                            entry = {
+                                'id': attendance_rec['_id'],
+                                'index': index_name,
+                                'course': course_name,
+                                'date': attendance_rec['date'],
+                                'student': student_rec['student'],
+                                'documents': student_rec['documents']
+                            }
+                            absentees.append(entry)
+    absentees.sort(key=lambda x: x.get('date'))
+    return jsonify(absentees)
+
+
 # * ----------- Manual Attendance Routes ---------
 
 # return the attendance list specified by the course, group

@@ -27,11 +27,15 @@ def upload_file():
     if 'document' in request.files:
         document = request.files['document']
         mongo.save_file(document.filename, document)
+        student_id = request.form.get('student_id')
+        attendance_id = request.form.get('attendance_id')
         #document_id =mongo.db.users.insert_one({'username':request.form.get('username'), 'date': request.form.get('date'), 'document_name': document.filename}).inserted_id
-        usersCollection.insert_one({'username':request.form.get('username'), 'date': request.form.get('date'), 'document_name': document.filename})
-        doc_oid = usersCollection.find_one({'username':request.form.get('username'), 'date': request.form.get('date'), 'document_name': document.filename})['_id']
-        docCollection.insert_one({'index': ObjectId(doc_oid), 'document_name': document.filename})
+        usersCollection.insert_one({'student_id':student_id, 'attendance_id': ObjectId(attendance_id), 'document_name': document.filename})
+        doc_oid = usersCollection.find_one({'student_id':student_id, 'attendance_id': ObjectId(attendance_id), 'document_name': document.filename})['_id']
+        #docCollection.insert_one({'index': ObjectId(doc_oid), 'document_name': document.filename})
         #return dumps(document_id)
+        attendanceCollection.find_one_and_update({'_id': ObjectId(attendance_id), 'student_id': student_id },
+        {'$set': {'documents': ObjectId(doc_oid)}}, upsert = True)
         return "Done!"
 
 # direct link to download file by fileid

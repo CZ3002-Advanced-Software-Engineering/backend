@@ -353,14 +353,17 @@ def getUser():
 
 @app.route("/update_attendance", methods=['PUT'])
 def getSession():
-    session_id = request.args.get('session')
-    attendance_record = request.args.get('students')
+    # session_id = request.args.get('session')
+    session_id = '616c488da51307e040dd213f'
+    # attendance_record = request.args.get('students')
+    attendance_record = ['615abd43789fb41cf8fd326a:pending',
+                         '615abd43789fb41cf8fd326e:pending']
     print('my attendance record')
     # print(attendance_record.split(','))
     # ['615abd43789fb41cf8fd326b:present', ' 615abd43789fb41cf8fd326d:present', ' 615abd43789fb41cf8fd326e:absent']
     db_collection = attendanceCollection
 
-    for each_student in attendance_record.split(','):
+    for each_student in attendance_record:
         student_id = each_student.split(':')[0]
         attendance = each_student.split(':')[1]
         # print('student id')

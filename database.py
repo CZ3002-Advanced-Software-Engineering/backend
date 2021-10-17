@@ -1,5 +1,6 @@
 # * --------- IMPORTS --------- *
 from bson.objectid import ObjectId
+from dns.rdatatype import NULL
 from flask import Flask, json, request, jsonify, make_response, Response
 from flask_cors import CORS, cross_origin
 from bson import json_util
@@ -385,17 +386,20 @@ def getUser():
 
 @app.route("/update_attendance", methods=['PUT'])
 def getSession():
-    # session_id = request.args.get('session')
-    session_id = '616c488da51307e040dd213f'
-    # attendance_record = request.args.get('students')
+    session_id = json.loads(request.get_data(
+        'session_id').decode('UTF-8'))['params']['session_id']
+    # session_id = '616c488da51307e040dd213f'
+    attendance_record = json.loads(request.get_data(
+        'session_id').decode('UTF-8'))['params']['attendance_record']
     # attendance_record = ['615abd43789fb41cf8fd326a:pending',
     #                      '615abd43789fb41cf8fd326e:pending']
-    attendance_record = [{'oid': '615abd43789fb41cf8fd326a', 'status': 'pending'}, {
-        'oid': '615abd43789fb41cf8fd326e', 'status': 'pending'}]
+    # attendance_record = [{'oid': '615abd43789fb41cf8fd326a', 'status': 'absent'}, {
+    #     'oid': '615abd43789fb41cf8fd326e', 'status': 'absent'}]
     print('my attendance record')
     current_time = datetime.today().strftime("%I:%M:%S %p")
     print('current time is')
     print(current_time)
+    print('session id', session_id)
     # print(attendance_record.split(','))
     # ['615abd43789fb41cf8fd326b:present', ' 615abd43789fb41cf8fd326d:present', ' 615abd43789fb41cf8fd326e:absent']
     db_collection = attendanceCollection
@@ -403,7 +407,8 @@ def getSession():
     for each_student in attendance_record:
         # student_id = each_student.split(':')[0]
         # attendance = each_student.split(':')[1]
-        student_id = each_student['oid']
+        print(each_student)
+        student_id = each_student['student']
         attendance = each_student['status']
         # print('student id')
         # print(student_id)
@@ -417,8 +422,7 @@ def getSession():
         db_collection.update_one({'_id': ObjectId(session_id), 'students': {'$elemMatch': {
                                  'student': ObjectId(student_id)}}}, {'$set': {'students.$.status': attendance, 'students.$.checkintime': current_time}})
 
-    this_session = db_collection.find_one({'_id': ObjectId(session_id)}, {
-                                          'students': {'$elemMatch': {'student': ObjectId('615abd43789fb41cf8fd326e')}}})
+    this_session = db_collection.find_one({'_id': ObjectId(session_id)})
 
     # for each_student in this_session['students']:
     #     print(each_student)
@@ -431,7 +435,7 @@ def getSession():
         # return jsonify(this_session['students'][0]['status'])
         return jsonify(full_session)
     else:
-        return jsonify({'msg': 'session not available'})
+        return jsonify(NULL)
 
 
 @app.route("/kevin/manual", methods=['PUT'])

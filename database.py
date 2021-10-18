@@ -43,7 +43,7 @@ studentCollection = mongo.db.newStudent
 teacherCollection = mongo.db.newTeacher
 attendanceCollection = mongo.db.newAttendance
 indexCollection = mongo.db.newIndexes
-docCollection = mongo.db.docs
+docCollection = mongo.db.users
 
 
 # * ----------- General Functions ---------

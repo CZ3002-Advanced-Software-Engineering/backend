@@ -155,6 +155,7 @@ def viewClassAttendance():
     return jsonify(attendance_rec)
     # returns null if record does not exist
 
+
 # return the student's attendance entry specified by the student oid, course, group and date
 # args: student_oid, course, group, date (YYYY-MM-DD string)
 
@@ -244,7 +245,7 @@ def view_student_absent():
                                 'documents': student_rec['documents']
                             }
                             absentees.append(entry)
-    absentees.sort(key=lambda x: x.get('date'))
+    absentees.sort(key=lambda x: (x.get('course'), x.get('date')))
     return jsonify(absentees)
 
 
@@ -381,6 +382,7 @@ def getUser():
     else:
         return Response(status=400)
 
+
 # put method to update attendance session by objectid
 
 # test comment
@@ -422,7 +424,8 @@ def getSession():
         #       '$elemMatch': {'student': ObjectId(student_id)}}})['students'][0]['status'])
 
         db_collection.update_one({'_id': ObjectId(session_id), 'students': {'$elemMatch': {
-                                 'student': ObjectId(student_id)}}}, {'$set': {'students.$.status': attendance, 'students.$.checkintime': current_time}})
+            'student': ObjectId(student_id)}}},
+                                 {'$set': {'students.$.status': attendance, 'students.$.checkintime': current_time}})
 
     this_session = db_collection.find_one({'_id': ObjectId(session_id)})
 
@@ -442,8 +445,8 @@ def getSession():
 
 @app.route("/kevin/manual", methods=['PUT'])
 def takeAttendanceKevin():
-    #course = request.args.get('course')
-    #group = request.args.get('group')
+    # course = request.args.get('course')
+    # group = request.args.get('group')
     course = "CZ3002"
     group = "TS1"
     incoming_attendance = ["615abd43789fb41cf8fd3269:present", "615abd43789fb41cf8fd326a:absent",

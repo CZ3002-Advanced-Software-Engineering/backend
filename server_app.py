@@ -59,8 +59,8 @@ def upload_file():
         student_id = request.args.get('student_id')
         attendance_id = request.args.get('attendance_id')
   
-        docCollection.insert_one({'student_id': ObjectId(student_id), 'attendance_id': ObjectId(attendance_id), 'doc_name': document.filename}) 
-        doc_oid = docCollection.find_one({'student_id': ObjectId(student_id), 'doc_name': document.filename, 'attendance_id': ObjectId(attendance_id)})['_id']
+        docCollection.insert_one({'student_id': ObjectId(student_id), 'attendance_id': ObjectId(attendance_id), 'document_name': document.filename}) 
+        doc_oid = docCollection.find_one({'student_id': ObjectId(student_id), 'document_name': document.filename, 'attendance_id': ObjectId(attendance_id)})['_id']
         
         attendanceCollection.find_one_and_update({'_id': ObjectId(attendance_id), 'students.student': ObjectId(student_id)},
                                                  {'$set': {'students.$.documents': ObjectId(doc_oid)}}, upsert = True)

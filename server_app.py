@@ -34,11 +34,11 @@ app.config["MONGO_URI"] = "mongodb+srv://admin:p%40ssw0rd@asecluster.mgx31.mongo
 #app.config["MONGO_URI"] = "mongodb://localhost:27017/FRAS"
 mongo = PyMongo(app)
 
-studentCollection = mongo.db.student
-teacherCollection = mongo.db.users
-moduleCollection = mongo.db.module
+#studentCollection = mongo.db.student
+#teacherCollection = mongo.db.users
+#moduleCollection = mongo.db.module
 attendanceCollection = mongo.db.newAttendance
-docCollection = mongo.db.docs
+docCollection = mongo.db.users
 
 #UPLOAD_FOLDER = 'C:\\Users\\USER\\Desktop\\file_upload\\backend\\uploadedfiles'
 ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'])
@@ -46,35 +46,7 @@ ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'])
 
 # * -----------Create routes and functions here ---------
 # login authentication for teachers and students maybe
-@app.route('/login', methods=['POST'])
-def login():
-    #data = request.get_json()
-    data = request.args.get()
-    if data['domain'] == 'teacher':
-        users = teacherCollection
-    elif data['domain'] == 'student':
-        users = studentCollection 
-    email = data['email']
-    password = data['password']
-    result = ""
 
-    response = users.find_one({'email': email})
-
-    if response:
-      if response['password'] == password:
-
-          access_token = create_access_token(identity = {
-          'name': response['name'],
-              
-          'email': response['email']
-            })
-          #result = jsonify({'token':access_token})
-          result = jsonify({'result' : "Log in Successful"})
-      else:
-          result = jsonify({"error":"Invalid username and password"})
-    else:
-        result = jsonify({"result":"No results found"})
-    return result 
 
 # upload a file with respect to current database, not sure
 @app.route('/upload', methods=['POST'])
@@ -102,7 +74,7 @@ def upload_file():
 def getfile(fileid):
     query = {'_id': ObjectId(fileid)}
     cursor = docCollection.find_one(query)
-    fileName = cursor['doc_name']
+    fileName = cursor['document_name']
     return mongo.send_file(fileName) #as_attachment=True#
     
 

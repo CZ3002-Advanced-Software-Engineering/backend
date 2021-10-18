@@ -493,27 +493,23 @@ def check(id):
     return json.dumps(doc, default=json_util.default)
 
 
-# Upload file and update documents id into newAttendance
+# upload a file with respect to current database, not sure
 @app.route('/upload', methods=['POST'])
 def upload_file():
-    # name = request.args.get('name')
-    # course = request.args.get('course')
-    # group = request.args.get('index')
-    # status = request.args.get('status')
-    # date = request.args.get('date')
     student_id = request.args.get('student_id')
     attendance_id = request.args.get('attendance_id')
 
     if 'document' in request.files:
         document = request.files['document']
         mongo.save_file(document.filename, document)
-        docCollection.insert_one(
-            {'student_id': ObjectId(student_id), 'attendance_id': Object(attendance_id), 'doc_name': document.filename})
+        docCollection.insert_one({'student_id': ObjectId(student_id), 'attendance_id': ObjectId(attendance_id),
+                                  'doc_name': document.filename})
         doc_oid = docCollection.find_one({'student_id': ObjectId(student_id), 'doc_name': document.filename,
                                           'attendance_id': ObjectId(attendance_id)})['_id']
-        attendanceCollection.find_one_and_update({'_id': ObjectId(attendance_id), 'student': ObjectId(student_id)},
-                                                 {'$set': {'documents': ObjectId(doc_oid)}}, upsert=True)
-        # update into attendancelist the id of document in mongodb part not sure
+
+        attendanceCollection.find_one_and_update(
+            {'_id': ObjectId(attendance_id), 'students.student': ObjectId(student_id)},
+            {'$set': {'students.$.documents': ObjectId(doc_oid)}}, upsert=True)
 
         return "Uploaded Successfully!"
 
@@ -521,13 +517,10 @@ def upload_file():
 # direct link to download file by fileid
 @app.route('/download/<fileid>')
 def getfile(fileid):
-    try:
-        query = {'_id': ObjectId(fileid)}
-        cursor = docCollection.find_one(query)
-        fileName = cursor['doc_name']
-        return mongo.send_file(fileName)
-    except:
-        return "Unexpected Error!"
+    query = {'_id': ObjectId(fileid)}
+    cursor = docCollection.find_one(query)
+    fileName = cursor['doc_name']
+    return mongo.send_file(fileName)  # as_attachment=True#
 
 
 @app.route('/username', methods=['POST'])

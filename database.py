@@ -524,7 +524,7 @@ def getfile(fileid):
     try:
         query = {'_id': ObjectId(fileid)}
         cursor = docCollection.find_one(query)
-        fileName = cursor['doc_name']
+        fileName = cursor['document_name']
         return mongo.send_file(fileName)
     except:
         return "Unexpected Error!"

@@ -153,10 +153,12 @@ def viewClassAttendance():
 
     attendance_rec = getAttendance(course, group, attendance_date)
     return jsonify(attendance_rec)
-
+    # returns null if record does not exist
 
 # return the student's attendance entry specified by the student oid, course, group and date
 # args: student_oid, course, group, date (YYYY-MM-DD string)
+
+
 @app.route("/view_student_attendance", methods=['GET'])
 def viewStudentAttendance():
     student_oid = request.args.get('student_oid')

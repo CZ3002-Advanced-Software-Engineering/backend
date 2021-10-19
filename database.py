@@ -236,7 +236,7 @@ def view_student_absent():
                     course_name = indexCollection.find_one(
                         {'_id': attendance_rec['index']})['course']
                     for student_rec in attendance_rec['students']:
-                        if student_rec['student'] == ObjectId(student_id):
+                        if student_rec['student'] == ObjectId(student_id) and student_rec['status'] == 'absent':
                             entry = {
                                 'id': attendance_rec['_id'],
                                 'index': index_name,
@@ -507,18 +507,31 @@ def upload_file():
     # group = request.args.get('index')
     # status = request.args.get('status')
     # date = request.args.get('date')
-    student_id = request.args.get('student_id')
-    attendance_id = request.args.get('attendance_id')
+    student_id = request.args.get('studentId')
+    attendance_id = request.args.get('attendanceId')
+    print(student_id)
+    print(attendance_id)
+    print(request.files)
 
     if 'document' in request.files:
         document = request.files['document']
+        print('document here ', document)
+        print('what is document.filename', document.filename)
         mongo.save_file(document.filename, document)
         docCollection.insert_one(
-            {'student_id': ObjectId(student_id), 'attendance_id': Object(attendance_id), 'doc_name': document.filename})
+            {'student_id': ObjectId(student_id), 'attendance_id': ObjectId(attendance_id),
+             'doc_name': document.filename})
         doc_oid = docCollection.find_one({'student_id': ObjectId(student_id), 'doc_name': document.filename,
                                           'attendance_id': ObjectId(attendance_id)})['_id']
-        attendanceCollection.find_one_and_update({'_id': ObjectId(attendance_id), 'student': ObjectId(student_id)},
-                                                 {'$set': {'documents': ObjectId(doc_oid)}}, upsert=True)
+        print('my doc_oid ', doc_oid)
+        print('my attendance id ', attendance_id)
+        print('my student id ', student_id)
+        # attendanceCollection.update_one({'_id': ObjectId(attendance_id), 'student': ObjectId(student_id)},
+        #                                 {'$set': {'students.$.documents': 'updated document here'}})
+        attendanceCollection.update_one({'_id': ObjectId(attendance_id), 'students': {'$elemMatch': {
+            'student': ObjectId(student_id)}}},
+            {'$set': {'students.$.documents': ObjectId(doc_oid)}})
+        print('updated attendance collection')
         # update into attendancelist the id of document in mongodb part not sure
 
         return "Uploaded Successfully!"
@@ -529,8 +542,11 @@ def upload_file():
 def getfile(fileid):
     try:
         query = {'_id': ObjectId(fileid)}
+        print('myfile id ', fileid)
         cursor = docCollection.find_one(query)
-        fileName = cursor['document_name']
+        print('my cursor', cursor)
+        fileName = cursor['doc_name']
+        print('my file name', fileName)
         return mongo.send_file(fileName)
     except:
         return "Unexpected Error!"

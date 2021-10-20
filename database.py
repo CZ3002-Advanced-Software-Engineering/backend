@@ -35,15 +35,21 @@ app.json_encoder = MyEncoder
 
 # * ----------MongoDB connect -------*
 app.config[
-    "MONGO_URI"] = "mongodb+srv://admin:p%40ssw0rd@asecluster.mgx31.mongodb.net/database?ssl=true&ssl_cert_reqs=CERT_NONE"
+    "MONGO_URI"] = "mongodb+srv://admin:p%40ssw0rd@asecluster.mgx31.mongodb.net/demo?ssl=true&ssl_cert_reqs=CERT_NONE"
 mongo = PyMongo(app)
 
 # * --------MongodbCollection-------*
-studentCollection = mongo.db.newStudent
-teacherCollection = mongo.db.newTeacher
-attendanceCollection = mongo.db.newAttendance
-indexCollection = mongo.db.newIndexes
-docCollection = mongo.db.users
+studentCollection = mongo.db.student
+teacherCollection = mongo.db.teacher
+attendanceCollection = mongo.db.attendance
+indexCollection = mongo.db.index
+docCollection = mongo.db.student_docs
+
+# studentCollection = mongo.db.newStudent
+# teacherCollection = mongo.db.newTeacher
+# attendanceCollection = mongo.db.newAttendance
+# indexCollection = mongo.db.newIndexes
+# docCollection = mongo.db.users
 
 
 # * ----------- General Functions ---------
@@ -288,7 +294,6 @@ def faceDataPrep():
     course = request.args.get('course')
     group = request.args.get('group')
     current_date = str(date.today())
-    # current_date = '2021-09-15'
 
     # get index oid and look for existing attendance rec for today
     index_oid = indexCollection.find_one(
@@ -355,7 +360,7 @@ def faceMatch():
                     './encoding', unknown_img_dir, unknown_img_name)
 
                 if name != 'nobody':
-                    check_in_time = datetime.now().strftime('%H:%M:%S %p')
+                    check_in_time = datetime.now().strftime('%I:%M:%S %p')
                     student_oid = studentCollection.find_one({'name': name})[
                         '_id']
                     updateAttendance(session_details['index_oid'], session_details['date'], student_oid,

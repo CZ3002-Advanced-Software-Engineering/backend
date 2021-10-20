@@ -152,6 +152,7 @@ def viewClassAttendance():
     attendance_date = str(request.args.get('date'))
 
     attendance_rec = getAttendance(course, group, attendance_date)
+    print(attendance_rec)
     return jsonify(attendance_rec)
     # returns null if record does not exist
 
@@ -400,9 +401,11 @@ def getSession():
     # attendance_record = [{'oid': '615abd43789fb41cf8fd326a', 'status': 'absent'}, {
     #     'oid': '615abd43789fb41cf8fd326e', 'status': 'absent'}]
     print('my attendance record')
-    current_time = datetime.today().strftime("%I:%M:%S %p")
-    print('current time is')
-    print(current_time)
+    # current_time = datetime.today().strftime("%I:%M:%S %p")
+    # print('current time is')
+    # print(current_time)
+    print(json.loads(request.get_data(
+        'session_id').decode('UTF-8')))
     print('session id', session_id)
     # print(attendance_record.split(','))
     # ['615abd43789fb41cf8fd326b:present', ' 615abd43789fb41cf8fd326d:present', ' 615abd43789fb41cf8fd326e:absent']
@@ -414,6 +417,9 @@ def getSession():
         print(each_student)
         student_id = each_student['student']
         attendance = each_student['status']
+        if attendance == 'pending':
+            attendance = 'absent'
+        checkintime = each_student['checkintime']
         # print('student id')
         # print(student_id)
         # print('attendance present or absent')
@@ -425,7 +431,7 @@ def getSession():
 
         db_collection.update_one({'_id': ObjectId(session_id), 'students': {'$elemMatch': {
             'student': ObjectId(student_id)}}},
-            {'$set': {'students.$.status': attendance, 'students.$.checkintime': current_time}})
+            {'$set': {'students.$.status': attendance, 'students.$.checkintime': checkintime}})
 
     this_session = db_collection.find_one({'_id': ObjectId(session_id)})
 

@@ -1,10 +1,9 @@
 # * --------- IMPORTS --------- *
 from bson.objectid import ObjectId
 from dns.rdatatype import NULL
-from flask import Flask, json, request, jsonify, make_response, Response
-from flask_cors import CORS, cross_origin
+from flask import Flask, json, request, jsonify, Response
+from flask_cors import CORS
 from bson import json_util
-from bson.json_util import dumps, loads
 from datetime import date, datetime
 from flask_pymongo import PyMongo
 import os
@@ -15,8 +14,6 @@ import base64
 import io
 import shutil
 import pickle
-from json import dumps
-from bson.objectid import ObjectId
 
 
 class MyEncoder(json.JSONEncoder):
@@ -45,17 +42,11 @@ attendanceCollection = mongo.db.attendance
 indexCollection = mongo.db.index
 docCollection = mongo.db.student_docs
 
-# studentCollection = mongo.db.newStudent
-# teacherCollection = mongo.db.newTeacher
-# attendanceCollection = mongo.db.newAttendance
-# indexCollection = mongo.db.newIndexes
-# docCollection = mongo.db.users
-
 
 # * ----------- General Functions ---------
 
 # translate string to mongo collection
-def getCollection(collection):
+def get_collection(collection):
     if collection == 'student':
         db_collection = studentCollection
     elif collection == 'teacher':
@@ -71,7 +62,7 @@ def getCollection(collection):
 
 
 # create new attendance entry and insert into db
-def genNewAttendance(index_oid, attendance_date, teacher_oid, student_cursors):
+def gen_new_attendance(index_oid, attendance_date, teacher_oid, student_cursors):
     # consolidate the students into attendance list
     student_list = []
     for student in student_cursors:
@@ -92,7 +83,7 @@ def genNewAttendance(index_oid, attendance_date, teacher_oid, student_cursors):
 
 
 # get attendance entry from course, group and date (YYYY-MM-DD string)
-def getAttendance(course, group, attendance_date):
+def get_attendance(course, group, attendance_date):
     # get index oid from course and group provided
     index_oid = indexCollection.find_one(
         {'course': course, 'group': group})['_id']
@@ -103,7 +94,7 @@ def getAttendance(course, group, attendance_date):
 
 
 # update the attendance entry of a student
-def updateAttendance(index_oid, attendance_date, student_oid, check_in_time, status):
+def update_attendance(index_oid, attendance_date, student_oid, check_in_time, status):
     attendanceCollection.find_one_and_update(
         {'index': index_oid,
          'date': attendance_date,
@@ -118,11 +109,11 @@ def updateAttendance(index_oid, attendance_date, student_oid, check_in_time, sta
 # return documents with ids in specified collection
 # args: collection, ids
 @app.route("/get_all_items", methods=['GET'])
-def getAllItems():
+def get_all_items():
     docs_list = []
     collection = request.args.get('collection')
     ids = json.loads(request.args.get('id'))
-    db_collection = getCollection(collection)
+    db_collection = get_collection(collection)
     for entry in ids:
         doc = db_collection.find_one({'_id': ObjectId(entry)})
         docs_list.append(doc)
@@ -130,34 +121,17 @@ def getAllItems():
     return json.dumps(docs_list, default=json_util.default)
 
 
-# return single document found in specified collection
-# args: oid, collection
-@app.route("/find_by_oid", methods=['GET'])
-def findByOid():
-    oid = request.args.get('oid')
-    collection = request.args.get('collection')
-    db_collection = getCollection(collection)
-
-    if db_collection != '':
-        result = db_collection.find_one({'_id': ObjectId(oid)})
-        response = Response(dumps(result), mimetype='application/json')
-    else:
-        response = {}
-
-    return response
-
-
 # * ----------- View Attendance Routes ---------
 
 # return the attendance list specified by the course, group and date
 # args: course, group, date (YYYY-MM-DD string)
 @app.route("/view_class_attendance", methods=['GET'])
-def viewClassAttendance():
+def view_class_attendance():
     course = request.args.get('course')
     group = request.args.get('group')
     attendance_date = str(request.args.get('date'))
 
-    attendance_rec = getAttendance(course, group, attendance_date)
+    attendance_rec = get_attendance(course, group, attendance_date)
     print(attendance_rec)
     return jsonify(attendance_rec)
     # returns null if record does not exist
@@ -168,13 +142,13 @@ def viewClassAttendance():
 
 
 @app.route("/view_student_attendance", methods=['GET'])
-def viewStudentAttendance():
+def view_student_attendance():
     student_oid = request.args.get('student_oid')
     course = request.args.get('course')
     group = request.args.get('group')
     attendance_date = str(request.args.get('date'))
 
-    attendance_rec = getAttendance(course, group, attendance_date)
+    attendance_rec = get_attendance(course, group, attendance_date)
     student_entry = None
     # if attendance rec exists, loop through students to find and retrieve the attendance of student
     if attendance_rec:
@@ -192,7 +166,7 @@ def viewStudentAttendance():
 # return the absentees specified by the teacher's indexes
 # args: teacher_oid
 @app.route("/view_absentees", methods=['GET'])
-def viewAbsentees():
+def view_absentees():
     teacher_oid = request.args.get('teacher_oid')
     indexes_taught = teacherCollection.find_one(
         {'_id': ObjectId(teacher_oid)})['indexes_taught']
@@ -262,7 +236,7 @@ def view_student_absent():
 # (create new one and return it if none exists for current session)
 # args: course, group
 @app.route("/take_attendance/manual", methods=['GET'])
-def takeAttendance():
+def take_attendance():
     course = request.args.get('course')
     group = request.args.get('group')
     current_date = str(date.today())
@@ -278,7 +252,7 @@ def takeAttendance():
         teacher_oid = teacherCollection.find_one(
             {'indexes_taught': index_oid})['_id']
         student_cursors = studentCollection.find({'indexes_taken': index_oid})
-        attendance_rec = genNewAttendance(
+        attendance_rec = gen_new_attendance(
             index_oid, current_date, teacher_oid, student_cursors)
 
     return jsonify(attendance_rec)
@@ -289,8 +263,7 @@ def takeAttendance():
 # return attendance list like manual route but also encode images of students from the session
 # args: course, group
 @app.route('/take_attendance/face', methods=['GET'])
-def faceDataPrep():
-    start = time.perf_counter()
+def face_data_prep():
     course = request.args.get('course')
     group = request.args.get('group')
     current_date = str(date.today())
@@ -308,7 +281,7 @@ def faceDataPrep():
     if not attendance_rec:
         teacher_oid = teacherCollection.find_one(
             {'indexes_taught': index_oid})['_id']
-        attendance_rec = genNewAttendance(
+        attendance_rec = gen_new_attendance(
             index_oid, current_date, teacher_oid, student_list)
 
     # place student image filename and student name into dict
@@ -323,8 +296,6 @@ def faceDataPrep():
     with open('./encoding/session_details.pkl', 'wb') as f:
         pickle.dump(session_details, f)
 
-    stop = time.perf_counter()
-    print(stop - start)
     time.sleep(2)
     return jsonify(attendance_rec)
 
@@ -332,9 +303,7 @@ def faceDataPrep():
 # return name of student that matches the image sent to the route
 # args: none but must receive base64 encoded image
 @app.route('/face_match', methods=['POST', 'GET'])
-def faceMatch():
-    start = time.perf_counter()
-
+def face_match():
     # get stored session details
     with open('./encoding/session_details.pkl', 'rb') as f:
         session_details = pickle.load(f)
@@ -363,22 +332,20 @@ def faceMatch():
                     check_in_time = datetime.now().strftime('%I:%M:%S %p')
                     student_oid = studentCollection.find_one({'name': name})[
                         '_id']
-                    updateAttendance(session_details['index_oid'], session_details['date'], student_oid,
-                                     check_in_time, 'present')
+                    update_attendance(session_details['index_oid'], session_details['date'], student_oid,
+                                      check_in_time, 'present')
                     response = name + ' Attendance Taken'
             except Exception as e:
                 print(e)
                 response = 'Error Processing'
 
-    stop = time.perf_counter()
-    print(stop - start)
     return response
 
 
 @app.route("/login", methods=['GET'])
-def getUser():
+def get_user():
     domain = request.args.get('domain')
-    db_collection = getCollection(domain)
+    db_collection = get_collection(domain)
 
     username = request.args.get('username')
     password = request.args.get('password')
@@ -390,128 +357,40 @@ def getUser():
 
 
 # put method to update attendance session by objectid
-
-# test comment
-
-
 @app.route("/update_attendance", methods=['PUT'])
-def getSession():
+def get_session():
     session_id = json.loads(request.get_data(
         'session_id').decode('UTF-8'))['params']['session_id']
-    # session_id = '616c488da51307e040dd213f'
     attendance_record = json.loads(request.get_data(
         'session_id').decode('UTF-8'))['params']['attendance_record']
-    # attendance_record = ['615abd43789fb41cf8fd326a:pending',
-    #                      '615abd43789fb41cf8fd326e:pending']
-    # attendance_record = [{'oid': '615abd43789fb41cf8fd326a', 'status': 'absent'}, {
-    #     'oid': '615abd43789fb41cf8fd326e', 'status': 'absent'}]
-    print('my attendance record')
-    # current_time = datetime.today().strftime("%I:%M:%S %p")
-    # print('current time is')
-    # print(current_time)
     print(json.loads(request.get_data(
         'session_id').decode('UTF-8')))
     print('session id', session_id)
-    # print(attendance_record.split(','))
-    # ['615abd43789fb41cf8fd326b:present', ' 615abd43789fb41cf8fd326d:present', ' 615abd43789fb41cf8fd326e:absent']
     db_collection = attendanceCollection
 
     for each_student in attendance_record:
-        # student_id = each_student.split(':')[0]
-        # attendance = each_student.split(':')[1]
         print(each_student)
         student_id = each_student['student']
         attendance = each_student['status']
         if attendance == 'pending':
             attendance = 'absent'
         checkintime = each_student['checkintime']
-        # print('student id')
-        # print(student_id)
-        # print('attendance present or absent')
-        # print(attendance)
-
-        # print('current status in db')
-        # print(db_collection.find_one({'_id': ObjectId(session_id), 'students': {
-        #       '$elemMatch': {'student': ObjectId(student_id)}}})['students'][0]['status'])
 
         db_collection.update_one({'_id': ObjectId(session_id), 'students': {'$elemMatch': {
             'student': ObjectId(student_id)}}},
             {'$set': {'students.$.status': attendance, 'students.$.checkintime': checkintime}})
 
     this_session = db_collection.find_one({'_id': ObjectId(session_id)})
-
-    # for each_student in this_session['students']:
-    #     print(each_student)
-    # according to the schema in db currently on 12/10 to access the
-    # status of the student present/absent
-    # need to use this_session['students'][0]['status']
-
     full_session = db_collection.find_one({'_id': ObjectId(session_id)})
     if this_session:
-        # return jsonify(this_session['students'][0]['status'])
         return jsonify(full_session)
     else:
         return jsonify(NULL)
 
 
-@app.route("/kevin/manual", methods=['PUT'])
-def takeAttendanceKevin():
-    # course = request.args.get('course')
-    # group = request.args.get('group')
-    course = "CZ3002"
-    group = "TS1"
-    incoming_attendance = ["615abd43789fb41cf8fd3269:present", "615abd43789fb41cf8fd326a:absent",
-                           "615abd43789fb41cf8fd326c:present", "615b0e7f9e476147bdc53d31:absent"]
-    current_date = str(date.today())
-    # current_date = '2021-09-15'
-
-    # get index oid and look for existing attendance rec for today
-    index_oid = indexCollection.find_one(
-        {'course': course, 'group': group})['_id']
-    attendance_rec = attendanceCollection.find_one(
-        {'index': index_oid, 'date': current_date})
-
-    # if attendance rec does not exist, create new rec
-    if not attendance_rec:
-        teacher_oid = teacherCollection.find_one(
-            {'indexes_taught': index_oid})['_id']
-        student_cursors = studentCollection.find({'indexes_taken': index_oid})
-        attendance_rec = genNewAttendance(
-            index_oid, current_date, teacher_oid, student_cursors)
-
-    for each_student in incoming_attendance:
-        student_id = each_student.split(":")[0]
-        attendance = each_student.split(":")[1]
-        print('student id')
-        print(student_id)
-        print('attendance present or absent')
-        print(attendance)
-
-        attendanceCollection.update_one({'_id': ObjectId(attendance_rec['_id']), 'students': {'$elemMatch': {
-            'student': ObjectId(student_id)}}}, {'$set': {'students.$.status': attendance}})
-
-    updated_session = attendanceCollection.find_one(
-        {'_id': ObjectId(attendance_rec['_id'])})
-
-    return jsonify(updated_session)
-
-
-@app.route("/get_data/<id>")
-def check(id):
-    collection = getCollection(id.split('=')[0])
-    oid = id.split('=')[1]
-    doc = collection.find_one({'_id': ObjectId(oid)})
-    return json.dumps(doc, default=json_util.default)
-
-
 # Upload file and update documents id into newAttendance
 @app.route('/upload', methods=['POST'])
 def upload_file():
-    # name = request.args.get('name')
-    # course = request.args.get('course')
-    # group = request.args.get('index')
-    # status = request.args.get('status')
-    # date = request.args.get('date')
     student_id = request.args.get('studentId')
     attendance_id = request.args.get('attendanceId')
     print(student_id)
@@ -531,20 +410,17 @@ def upload_file():
         print('my doc_oid ', doc_oid)
         print('my attendance id ', attendance_id)
         print('my student id ', student_id)
-        # attendanceCollection.update_one({'_id': ObjectId(attendance_id), 'student': ObjectId(student_id)},
-        #                                 {'$set': {'students.$.documents': 'updated document here'}})
         attendanceCollection.update_one({'_id': ObjectId(attendance_id), 'students': {'$elemMatch': {
             'student': ObjectId(student_id)}}},
             {'$set': {'students.$.documents': ObjectId(doc_oid)}})
         print('updated attendance collection')
-        # update into attendancelist the id of document in mongodb part not sure
 
         return "Uploaded Successfully!"
 
 
 # direct link to download file by fileid
 @app.route('/download/<fileid>')
-def getfile(fileid):
+def get_file(fileid):
     try:
         query = {'_id': ObjectId(fileid)}
         print('myfile id ', fileid)
@@ -555,14 +431,6 @@ def getfile(fileid):
         return mongo.send_file(fileName)
     except:
         return "Unexpected Error!"
-
-
-@app.route('/username', methods=['POST'])
-def login():
-    username = request.json["username"]
-    for doc in studentCollection.find():
-        if doc['username'] == request.form.get("username", ""):
-            return jsonify(username=username)
 
 
 # To avoid cors erros

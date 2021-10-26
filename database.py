@@ -9,8 +9,8 @@ from datetime import date, datetime
 from flask_pymongo import PyMongo
 import os
 import time
-# from face_rec import encode_images, recognize_faces
-# from PIL import Image
+from face_rec import encode_images, recognize_faces
+from PIL import Image
 import base64
 import io
 import shutil

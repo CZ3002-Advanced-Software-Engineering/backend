@@ -45,8 +45,12 @@ docCollection = mongo.db.student_docs
 
 # * ----------- General Functions ---------
 
-# translate string to mongo collection
 def get_collection(collection):
+    """Convert given string to mongodb collection
+
+    :param str collection: The collection to retrieve
+    :return: The mongodb collection
+    """
     if collection == 'student':
         db_collection = studentCollection
     elif collection == 'teacher':
@@ -61,8 +65,15 @@ def get_collection(collection):
     return db_collection
 
 
-# create new attendance entry and insert into db
 def gen_new_attendance(index_oid, attendance_date, teacher_oid, student_cursors):
+    """Used by routes to create new attendance entry and insert into db
+
+    :param bson.objectid.ObjectId index_oid: The mongodb object id of the index
+    :param str attendance_date: The date of the attendance
+    :param bson.objectid.ObjectId teacher_oid: The mongodb object id of the teacher
+    :param student_cursors: The list of students that should be in the attendance
+    :return: The newly created attendance record
+    """
     # consolidate the students into attendance list
     student_list = []
     for student in student_cursors:
@@ -82,8 +93,14 @@ def gen_new_attendance(index_oid, attendance_date, teacher_oid, student_cursors)
     return attendance_rec
 
 
-# get attendance entry from course, group and date (YYYY-MM-DD string)
 def get_attendance(course, group, attendance_date):
+    """Retrieve attendance record from database
+
+    :param str course: The course of the attendance record
+    :param str group: The group of the attendance record
+    :param str attendance_date: The date of the attendance record
+    :return: The desired attendance record
+    """
     # get index oid from course and group provided
     index_oid = indexCollection.find_one(
         {'course': course, 'group': group})['_id']
@@ -93,8 +110,16 @@ def get_attendance(course, group, attendance_date):
     return attendance_rec
 
 
-# update the attendance entry of a student
 def update_attendance(index_oid, attendance_date, student_oid, check_in_time, status):
+    """Update the attendance status of a student in the database
+
+    :param bson.objectid.ObjectId index_oid: The mongodb object id of the index
+    :param str attendance_date: The date of the attendance
+    :param bson.objectid.ObjectId student_oid: The mongodb object id of the student
+    :param str check_in_time: The check-in time of the student
+    :param str status: The attendance status of the student
+    :return: None
+    """
     attendanceCollection.find_one_and_update(
         {'index': index_oid,
          'date': attendance_date,
@@ -106,43 +131,54 @@ def update_attendance(index_oid, attendance_date, student_oid, check_in_time, st
 
 # * ----------- General Routes ---------
 
-# return documents with ids in specified collection
-# args: collection, ids
 @app.route("/get_all_items", methods=['GET'])
 def get_all_items():
+    """Retrieve items from a collection with object ids
+
+    :param str id: The list of object ids of the items to retrieve
+    :param str collection: The collection that the ids belong to
+    :return: A json of all items retrieved
+    """
     docs_list = []
     collection = request.args.get('collection')
-    ids = json.loads(request.args.get('id'))
+    ids_str = request.args.get('id')
+    ids_list = json.loads(ids_str)
     db_collection = get_collection(collection)
-    for entry in ids:
+    for entry in ids_list:
         doc = db_collection.find_one({'_id': ObjectId(entry)})
         docs_list.append(doc)
-    # docs_list = list(db_collection.find({'_id': id}))
     return json.dumps(docs_list, default=json_util.default)
 
 
 # * ----------- View Attendance Routes ---------
 
-# return the attendance list specified by the course, group and date
-# args: course, group, date (YYYY-MM-DD string)
 @app.route("/view_class_attendance", methods=['GET'])
 def view_class_attendance():
+    """Retrieve the class attendance list
+
+    :param str course: The course of the attendance record
+    :param str group: The group of the attendance record
+    :param str date: The date of the attendance record (YYYY-MM-DD)
+    :return: A json of the attendance record if found
+    """
     course = request.args.get('course')
     group = request.args.get('group')
     attendance_date = str(request.args.get('date'))
 
     attendance_rec = get_attendance(course, group, attendance_date)
-    print(attendance_rec)
     return jsonify(attendance_rec)
-    # returns null if record does not exist
-
-
-# return the student's attendance entry specified by the student oid, course, group and date
-# args: student_oid, course, group, date (YYYY-MM-DD string)
 
 
 @app.route("/view_student_attendance", methods=['GET'])
 def view_student_attendance():
+    """Retrieve the student's attendance record
+
+    :param str student_oid: The object id of the student
+    :param str course: The course of the attendance record
+    :param str group: The group of the attendance record
+    :param str date: The date of the attendance record (YYYY-MM-DD)
+    :return: A json of the attendance record if found
+    """
     student_oid = request.args.get('student_oid')
     course = request.args.get('course')
     group = request.args.get('group')
@@ -163,10 +199,13 @@ def view_student_attendance():
     return jsonify(student_entry)
 
 
-# return the absentees specified by the teacher's indexes
-# args: teacher_oid
 @app.route("/view_absentees", methods=['GET'])
 def view_absentees():
+    """Retrieve all the absentees under a teacher
+
+    :param str teacher_oid: The object id of the teacher
+    :return: A json of all the absentees under the teacher
+    """
     teacher_oid = request.args.get('teacher_oid')
     indexes_taught = teacherCollection.find_one(
         {'_id': ObjectId(teacher_oid)})['indexes_taught']
@@ -200,6 +239,11 @@ def view_absentees():
 
 @app.route("/view_student_absent", methods=['GET'])
 def view_student_absent():
+    """Retrieve all absent attendance records of a student
+
+    :param str student_oid: The object id of the student
+    :return: A json of all the absent attendance records of the student
+    """
     student_id = request.args.get('student_oid')
     indexes = studentCollection.find_one(
         {'_id': ObjectId(student_id)})['indexes_taken']
@@ -232,11 +276,17 @@ def view_student_absent():
 
 # * ----------- Manual Attendance Routes ---------
 
-# return the attendance list specified by the course, group
-# (create new one and return it if none exists for current session)
-# args: course, group
 @app.route("/take_attendance/manual", methods=['GET'])
 def take_attendance():
+    """Create/retrieve an attendance record for a current session
+
+    This route is meant for manual attendance taking. The function attempts to retrieve the session from db and return
+    it if found. Otherwise, it creates a new session.
+
+    :param str course: The course of the attendance record
+    :param str group: The group of the attendance record
+    :return: A json of the attendance record for the requested session
+    """
     course = request.args.get('course')
     group = request.args.get('group')
     current_date = str(date.today())
@@ -260,10 +310,17 @@ def take_attendance():
 
 # * ----------- Facial Attendance Routes ---------
 
-# return attendance list like manual route but also encode images of students from the session
-# args: course, group
 @app.route('/take_attendance/face', methods=['GET'])
 def face_data_prep():
+    """Prepares all data required for taking attendance with using facial recognition
+
+    Create/retrieve attendance record for the current session like the manual route, but with addition of encoding
+    images of the students within the class and storing session details for reference by face_match route.
+
+    :param str course: The course of the attendance record
+    :param str group: The group of the attendance record
+    :return: A json of the attendance record for the requested session
+    """
     course = request.args.get('course')
     group = request.args.get('group')
     current_date = str(date.today())
@@ -300,10 +357,15 @@ def face_data_prep():
     return jsonify(attendance_rec)
 
 
-# return name of student that matches the image sent to the route
-# args: none but must receive base64 encoded image
 @app.route('/face_match', methods=['POST', 'GET'])
 def face_match():
+    """Match the captured image sent from frontend with encoded student images
+
+    This route should receive a base64 encoded image from the frontend. The image will be used to find a match among the
+    encoded student images.
+
+    :return: Student's name if match is found
+    """
     # get stored session details
     with open('./encoding/session_details.pkl', 'rb') as f:
         session_details = pickle.load(f)
@@ -344,6 +406,13 @@ def face_match():
 
 @app.route("/login", methods=['GET'])
 def get_user():
+    """Retrieve user with username and password
+
+    :param str domain: The domain of the user account
+    :param str username: The username of the user
+    :param str password: The password of the user
+    :return: The user if username and password are valid
+    """
     domain = request.args.get('domain')
     db_collection = get_collection(domain)
 
@@ -356,9 +425,14 @@ def get_user():
         return Response(status=400)
 
 
-# put method to update attendance session by objectid
 @app.route("/update_attendance", methods=['PUT'])
 def get_session():
+    """Update attendance record in database when submitting manual attendance
+
+    :param str session_id: The object id of the attendance record
+    :param attendance_record: The attendance record made up of student entries from the session
+    :return: A json of the updated attendance record
+    """
     session_id = json.loads(request.get_data(
         'session_id').decode('UTF-8'))['params']['session_id']
     attendance_record = json.loads(request.get_data(
@@ -378,7 +452,7 @@ def get_session():
 
         db_collection.update_one({'_id': ObjectId(session_id), 'students': {'$elemMatch': {
             'student': ObjectId(student_id)}}},
-            {'$set': {'students.$.status': attendance, 'students.$.checkintime': checkintime}})
+                                 {'$set': {'students.$.status': attendance, 'students.$.checkintime': checkintime}})
 
     this_session = db_collection.find_one({'_id': ObjectId(session_id)})
     full_session = db_collection.find_one({'_id': ObjectId(session_id)})
@@ -388,9 +462,14 @@ def get_session():
         return jsonify(NULL)
 
 
-# Upload file and update documents id into newAttendance
 @app.route('/upload', methods=['POST'])
 def upload_file():
+    """Upload file submitted by student
+
+    :param str studentId: The object id of the student
+    :param str attendanceId: The object id of the attendance record
+    :return: A success message
+    """
     student_id = request.args.get('studentId')
     attendance_id = request.args.get('attendanceId')
     print(student_id)
@@ -412,15 +491,19 @@ def upload_file():
         print('my student id ', student_id)
         attendanceCollection.update_one({'_id': ObjectId(attendance_id), 'students': {'$elemMatch': {
             'student': ObjectId(student_id)}}},
-            {'$set': {'students.$.documents': ObjectId(doc_oid)}})
+                                        {'$set': {'students.$.documents': ObjectId(doc_oid)}})
         print('updated attendance collection')
 
         return "Uploaded Successfully!"
 
 
-# direct link to download file by fileid
 @app.route('/download/<fileid>')
 def get_file(fileid):
+    """Direct link to download file by fileid
+
+    :param str fileid: The object id of the file to download
+    :return: The requested file if it exists
+    """
     try:
         query = {'_id': ObjectId(fileid)}
         print('myfile id ', fileid)

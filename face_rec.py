@@ -6,6 +6,16 @@ import pickle
 
 # for encoding selected student images in known-people folder then storing the encodings in pickle files
 def encode_images(known_person_path_file, encoding_path_file, student_dict):
+    """Encode the images of students in a class
+
+    This function uses student dict to only encode the images of selected students. The encodings and the student names
+    are then stored in pickle files to avoid having to encode again each time face matching is required.
+
+    :param str known_person_path_file: The path of where the images of all students are stored
+    :param str encoding_path_file: The path to store the encoded images and student names to
+    :param dict student_dict: A dict in the form of {image_filename: student_name}
+    :return: None
+    """
     known_face_encodings = []
     known_face_names = []
 
@@ -27,6 +37,13 @@ def encode_images(known_person_path_file, encoding_path_file, student_dict):
 
 
 def recognize_faces(encoding_path_file, unknown_image_path_file, unknown_image_filename):
+    """Compare the unknown image with the encoded images to try and find a match
+
+    :param str encoding_path_file: The path where the encoded images and student names are stored
+    :param str unknown_image_path_file: The path where the image captured from the frontend is stored
+    :param str unknown_image_filename: The filename of the image captured from the frontend
+    :return: The name of the matched student
+    """
     # load the unknown image
     unknown_image = face_recognition.load_image_file(unknown_image_path_file + '/' + unknown_image_filename)
 
